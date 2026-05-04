@@ -1,0 +1,28 @@
+{
+  "name": "smart-frota-pi",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "homepage": "https://athirson55.github.io/SMARTFROTA",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist",
+    "test:smoke": "npx playwright test --config=playwright.config.js",
+    "test:smoke:headed": "npx playwright test --config=playwright.config.js --headed",
+    "playwright:install": "npx playwright install"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "gh-pages": "^6.3.0",
+    "vite": "^5.4.11",
+    "@playwright/test": "^1.42.0"
+  }
+}

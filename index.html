@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Frota | Login</title>
+    <script type="module">
+      const isLocalDevelopment =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.port === "5173";
+
+      import(isLocalDevelopment ? "/src/main.jsx" : "/assets/app2.js");
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

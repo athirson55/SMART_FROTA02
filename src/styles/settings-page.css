@@ -1,0 +1,997 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap");
+
+/* ══════════════════════════════════════════
+   CSS CUSTOM PROPERTIES
+══════════════════════════════════════════ */
+.fg-settings-page {
+  --s-blue: #2563eb;
+  --s-blue-light: #eff6ff;
+  --s-blue-mid: #bfdbfe;
+  --s-bg: #f5f7fb;
+  --s-surface: #ffffff;
+  --s-border: #e5e9f2;
+  --s-text: #1e2a3b;
+  --s-muted: #7b8ca0;
+  --s-green: #16a34a;
+  --s-green-bg: #dcfce7;
+  --s-red: #dc2626;
+  --s-red-bg: #fee2e2;
+  --s-amber: #d97706;
+  --s-amber-bg: #fef3c7;
+  --s-purple: #7c3aed;
+  --s-purple-bg: #ede9fe;
+  --s-radius: 10px;
+  --s-shadow: 0 1px 4px rgba(30, 42, 59, 0.08);
+  --s-shadow-md: 0 4px 16px rgba(30, 42, 59, 0.12);
+
+  min-height: 100%;
+  background: var(--s-bg);
+  color: var(--s-text);
+  font-family: "DM Sans", sans-serif;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.fg-settings-page *,
+.fg-settings-page *::before,
+.fg-settings-page *::after {
+  box-sizing: inherit;
+}
+
+/* ── Header ── */
+.fg-settings-header {
+  height: 52px;
+  background: var(--s-surface);
+  border-bottom: 1px solid var(--s-border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.fg-settings-header-title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fg-settings-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fg-settings-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  background: var(--s-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--s-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.fg-settings-icon-btn:hover {
+  background: var(--s-bg);
+  color: var(--s-text);
+}
+.fg-settings-icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.fg-settings-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.fg-settings-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+.fg-settings-user-meta {
+  font-size: 12px;
+}
+.fg-settings-user-name {
+  font-weight: 600;
+  line-height: 1.2;
+}
+.fg-settings-user-role {
+  color: var(--s-muted);
+  font-size: 10px;
+}
+
+/* ── Layout ── */
+.fg-settings-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Sidebar nav ── */
+.fg-settings-nav {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--s-surface);
+  border-right: 1px solid var(--s-border);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+.fg-settings-nav-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--s-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 10px 4px;
+}
+.fg-settings-nav-group-label:first-child {
+  padding-top: 2px;
+}
+
+.fg-settings-nav-item {
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  color: var(--s-muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  width: 100%;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.fg-settings-nav-item:hover {
+  background: var(--s-bg);
+  color: var(--s-text);
+}
+.fg-settings-nav-item.active {
+  background: var(--s-blue-light);
+  color: var(--s-blue);
+}
+.fg-settings-nav-item.is-danger {
+  color: var(--s-red);
+}
+.fg-settings-nav-item.is-danger:hover {
+  background: var(--s-red-bg);
+}
+
+.fg-settings-nav-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  flex: 0 0 16px;
+}
+.fg-settings-nav-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+.fg-settings-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--s-red);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── Content area ── */
+.fg-settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  min-width: 0;
+}
+
+.fg-settings-section {
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+}
+.fg-settings-section.is-active {
+  display: flex;
+  animation: fgSettingsFadeIn 0.2s ease;
+}
+@keyframes fgSettingsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.fg-settings-section-header {
+  margin-bottom: 2px;
+}
+.fg-settings-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.fg-settings-section-title.is-danger {
+  color: var(--s-red);
+}
+.fg-settings-section-sub {
+  font-size: 12px;
+  color: var(--s-muted);
+}
+
+/* ── Cards ── */
+.fg-settings-card,
+.fg-settings-danger-zone {
+  background: var(--s-surface);
+  border: 1px solid var(--s-border);
+  border-radius: var(--s-radius);
+  box-shadow: var(--s-shadow);
+  overflow: hidden;
+}
+.fg-settings-danger-zone {
+  border-color: #fca5a5;
+}
+
+.fg-settings-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--s-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fg-settings-danger-zone .fg-settings-card-header {
+  background: var(--s-red-bg);
+  border-bottom-color: #fca5a5;
+}
+
+.fg-settings-card-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.fg-settings-card-header-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+.fg-settings-card-header-icon.blue {
+  background: var(--s-blue-light);
+  color: var(--s-blue);
+}
+.fg-settings-card-header-icon.purple {
+  background: var(--s-purple-bg);
+  color: var(--s-purple);
+}
+.fg-settings-card-header-icon.amber {
+  background: var(--s-amber-bg);
+  color: var(--s-amber);
+}
+.fg-settings-card-header-icon.red {
+  background: var(--s-red-bg);
+  color: var(--s-red);
+}
+.fg-settings-card-header-icon.green {
+  background: var(--s-green-bg);
+  color: var(--s-green);
+}
+.fg-settings-card-header-icon.gray {
+  background: var(--s-bg);
+  color: var(--s-muted);
+}
+
+.fg-settings-card-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.fg-settings-card-title.is-danger {
+  color: var(--s-red);
+}
+.fg-settings-card-sub {
+  font-size: 11px;
+  color: var(--s-muted);
+  margin-top: 1px;
+}
+.fg-settings-card-body {
+  padding: 20px;
+}
+.fg-settings-card-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--s-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--s-bg);
+}
+
+/* ── Form fields ── */
+.fg-settings-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fg-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.fg-settings-field.full {
+  grid-column: 1 / -1;
+}
+.fg-settings-field > span {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--s-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.fg-settings-field input,
+.fg-settings-field select {
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 38px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--s-bg);
+  color: var(--s-text);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s,
+    background-color 0.15s;
+  cursor: text;
+}
+.fg-settings-field select {
+  cursor: pointer;
+}
+.fg-settings-field input:focus,
+.fg-settings-field select:focus {
+  border-color: var(--s-blue);
+  background: var(--s-surface);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.fg-settings-field input.is-mono {
+  font-family: "DM Mono", monospace;
+}
+
+.fg-settings-form-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--s-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.fg-settings-form-divider::before,
+.fg-settings-form-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--s-border);
+}
+
+.fg-settings-form-hint {
+  font-size: 11px;
+  color: var(--s-muted);
+  margin-top: 3px;
+}
+.fg-settings-form-hint.error {
+  color: var(--s-red);
+}
+
+/* ── Avatar upload ── */
+.fg-settings-avatar-upload {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.fg-settings-avatar-big {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.fg-settings-avatar-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.fg-settings-avatar-change {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--s-blue);
+  border: 2px solid #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.fg-settings-avatar-change svg {
+  width: 12px;
+  height: 12px;
+  fill: #fff;
+}
+.fg-settings-avatar-info {
+  flex: 1;
+}
+.fg-settings-avatar-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.fg-settings-avatar-role {
+  font-size: 12px;
+  color: var(--s-muted);
+  margin-bottom: 8px;
+}
+.fg-settings-avatar-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Buttons ── */
+.fg-settings-upload-btn,
+.fg-settings-primary-btn,
+.fg-settings-ghost-btn,
+.fg-settings-danger-btn {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--s-border);
+  background: var(--s-surface);
+  color: var(--s-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  transition:
+    filter 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.fg-settings-upload-btn:hover,
+.fg-settings-ghost-btn:hover {
+  background: var(--s-bg);
+}
+.fg-settings-upload-btn.is-danger {
+  color: var(--s-red);
+}
+.fg-settings-upload-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fg-settings-upload-btn svg,
+.fg-settings-danger-btn svg,
+.fg-settings-primary-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.fg-settings-primary-btn {
+  background: var(--s-blue);
+  border-color: var(--s-blue);
+  color: #fff;
+  padding: 0 16px;
+}
+.fg-settings-primary-btn:hover {
+  filter: brightness(0.96);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+}
+.fg-settings-primary-btn:active {
+  filter: brightness(0.92);
+}
+
+.fg-settings-danger-btn {
+  color: var(--s-red);
+  background: var(--s-red-bg);
+  border-color: #fca5a5;
+}
+.fg-settings-danger-btn:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+.fg-settings-danger-btn.is-sm {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+/* ── Password strength ── */
+.fg-settings-pwd-strength {
+  margin-top: 6px;
+}
+.fg-settings-pwd-bars {
+  display: flex;
+  gap: 3px;
+  height: 4px;
+  margin-bottom: 4px;
+}
+.fg-settings-pwd-bar {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--s-border);
+  transition: background 0.2s;
+}
+.fg-settings-pwd-bar[data-active="true"] {
+  background: var(--s-blue);
+}
+.fg-settings-pwd-label {
+  font-size: 10px;
+  color: var(--s-muted);
+}
+
+/* ── 2FA block ── */
+.fg-settings-twofa-block {
+  background: var(--s-bg);
+  border: 1px solid var(--s-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fg-settings-twofa-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--s-purple-bg);
+  color: var(--s-purple);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.fg-settings-twofa-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+.fg-settings-twofa-info {
+  flex: 1;
+}
+.fg-settings-twofa-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.fg-settings-twofa-desc {
+  font-size: 11px;
+  color: var(--s-muted);
+}
+
+/* ── Badge ── */
+.fg-settings-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.fg-settings-badge.is-green {
+  background: var(--s-green-bg);
+  color: var(--s-green);
+}
+.fg-settings-badge.is-amber {
+  background: var(--s-amber-bg);
+  color: var(--s-amber);
+}
+.fg-settings-badge.is-blue {
+  background: var(--s-blue-light);
+  color: var(--s-blue);
+}
+
+/* ── Option cards ── */
+.fg-settings-option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.fg-settings-option-card {
+  padding: 12px 14px;
+  border: 1px solid var(--s-border);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--s-bg);
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.fg-settings-option-card:hover {
+  border-color: var(--s-blue-mid);
+  background: var(--s-surface);
+}
+.fg-settings-option-card.selected {
+  border-color: var(--s-blue);
+  background: var(--s-blue-light);
+  box-shadow: 0 0 0 2px var(--s-blue-mid);
+}
+.fg-settings-option-title {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.fg-settings-option-desc {
+  font-size: 11px;
+  color: var(--s-muted);
+}
+.fg-settings-option-card.selected .fg-settings-option-title {
+  color: var(--s-blue);
+}
+
+/* ── Color dots ── */
+.fg-settings-color-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fg-settings-color-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.fg-settings-color-dot:hover {
+  transform: scale(1.12);
+}
+.fg-settings-color-dot.selected {
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 5px currentColor;
+  transform: scale(1.06);
+}
+
+/* ── Slider ── */
+.fg-settings-stack {
+  display: grid;
+  gap: 16px;
+}
+.fg-settings-slider-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.fg-settings-slider-head > div {
+  font-size: 12px;
+  font-weight: 500;
+}
+.fg-settings-range-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fg-settings-range-wrap input[type="range"] {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  background: var(--s-border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.fg-settings-range-wrap input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--s-blue);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+  cursor: pointer;
+}
+
+/* ── Toggle rows ── */
+.fg-settings-toggles-list {
+  margin-top: 16px;
+}
+.fg-settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--s-bg);
+}
+.fg-settings-toggle-row:last-child {
+  border-bottom: 0;
+}
+.fg-settings-toggle-info {
+  flex: 1;
+  min-width: 0;
+}
+.fg-settings-toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.fg-settings-toggle-desc {
+  font-size: 11px;
+  color: var(--s-muted);
+}
+
+.fg-settings-toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: 0;
+  background: var(--s-border);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  flex-shrink: 0;
+}
+.fg-settings-toggle::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: left 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.fg-settings-toggle.on {
+  background: var(--s-blue);
+}
+.fg-settings-toggle.on::after {
+  left: 21px;
+}
+.fg-settings-toggle:focus-visible {
+  outline: 2px solid var(--s-blue);
+  outline-offset: 2px;
+}
+
+/* ── Sessions ── */
+.fg-settings-session-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--s-bg);
+}
+.fg-settings-session-item:last-child {
+  border-bottom: 0;
+}
+.fg-settings-session-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--s-bg);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.fg-settings-session-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--s-muted);
+}
+.fg-settings-session-info {
+  flex: 1;
+}
+.fg-settings-session-name {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 1px;
+}
+.fg-settings-session-meta {
+  font-size: 11px;
+  color: var(--s-muted);
+}
+
+/* ── Danger zone items ── */
+.fg-settings-danger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--s-bg);
+}
+.fg-settings-danger-item:last-child {
+  border-bottom: 0;
+}
+.fg-settings-danger-item.is-warning {
+  background: #fff5f5;
+}
+.fg-settings-danger-item-info {
+  flex: 1;
+}
+.fg-settings-danger-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.fg-settings-danger-item-desc {
+  font-size: 11px;
+  color: var(--s-muted);
+}
+
+/* ── Toast ── */
+.fg-settings-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 400;
+  background: var(--s-text);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--s-shadow-md);
+  transform: translateY(60px);
+  opacity: 0;
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
+}
+.fg-settings-toast.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+.fg-settings-toast svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--s-green);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .fg-settings-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .fg-settings-nav {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--s-border);
+    padding: 12px 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .fg-settings-nav-group-label {
+    display: none;
+  }
+  .fg-settings-nav-item {
+    width: auto;
+    white-space: nowrap;
+    border: 1px solid var(--s-border);
+  }
+  .fg-settings-nav-item.active {
+    border-color: var(--s-blue);
+  }
+}
+
+@media (max-width: 760px) {
+  .fg-settings-page {
+    overflow: auto;
+  }
+  .fg-settings-header {
+    height: auto;
+    padding: 10px 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .fg-settings-header-actions {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+  .fg-settings-content {
+    padding: 16px;
+  }
+  .fg-settings-form-grid,
+  .fg-settings-option-grid {
+    grid-template-columns: 1fr;
+  }
+  .fg-settings-avatar-upload,
+  .fg-settings-twofa-block,
+  .fg-settings-danger-item,
+  .fg-settings-session-item,
+  .fg-settings-card-header {
+    align-items: flex-start;
+  }
+  .fg-settings-twofa-block,
+  .fg-settings-danger-item {
+    flex-direction: column;
+  }
+  .fg-settings-card-footer {
+    justify-content: stretch;
+  }
+  .fg-settings-card-footer .fg-settings-primary-btn,
+  .fg-settings-card-footer .fg-settings-ghost-btn,
+  .fg-settings-card-footer .fg-settings-danger-btn {
+    width: 100%;
+  }
+  .fg-settings-toast {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    justify-content: center;
+  }
+}

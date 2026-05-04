@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Frota</title>
+    <script>
+      (function () {
+        var path = window.location.pathname.replace(/^\/SMARTFROTA\/?/, "");
+        var search = window.location.search;
+        var hash = window.location.hash;
+        var route = "/SMARTFROTA/#" + (path ? path : "/");
+
+        if (search) {
+          route += search;
+        }
+
+        if (hash) {
+          route += hash;
+        }
+
+        var target = route;
+        window.location.replace(target);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>
