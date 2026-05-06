@@ -1,0 +1,11 @@
+/* Quick fixes to improve collapsed sidebar behavior and label visibility */
+.fg-home-shell.is-collapsed .fg-home-sidebar{width:56px}
+.fg-home-sidebar.is-collapsed:hover{width:208px;transition:width .18s ease}
+.fg-home-sidebar.is-collapsed:hover .fg-sidebar-item__label,
+.fg-home-sidebar.is-collapsed:hover .fg-home-brand-label,
+.fg-home-sidebar.is-collapsed:hover .fg-home-logout__label{width:auto;opacity:1;overflow:visible}
+.fg-home-shell.is-collapsed:hover .fg-home-main{margin-left:208px}
+
+/* Fallbacks to ensure labels are readable when small */
+.fg-sidebar-item__label{min-width:0}
+.fg-home-brand-label{min-width:0}
