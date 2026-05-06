@@ -1,7 +1,11 @@
 import "../styles/alerts-page.css";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { AppHeader } from "../components/AppHeader";
+import {
+  getAlerts,
+  resolveAlert as resolveAlertRequest,
+} from "../services/alerts";
 
 const TYPE_CONFIG = {
   documento: {
@@ -60,260 +64,54 @@ const STA_CONFIG = {
   resolvido: { label: "Resolvido", cls: "badge-green" },
 };
 
-const alertsSeed = [
-  {
-    id: 1,
-    veiculo: "Eicher Pro 2059",
-    placa: "GJ28HT2889",
-    tipo: "documento",
-    titulo: "CRLV prestes a vencer",
-    desc: "CRLV do veículo vence em 3 dias. Renovação obrigatória para operação.",
-    prioridade: "critico",
-    status: "pendente",
-    data: "2024-07-22",
-    km: 87420,
-    acao: "Renovar no DETRAN",
-    responsavel: "Dep. Administrativo",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 2,
-    veiculo: "Tata Prima 4928S",
-    placa: "DL1PC4421",
-    tipo: "manutencao",
-    titulo: "Troca de óleo atrasada",
-    desc: "Veículo ultrapassou o intervalo de troca de óleo em 1.800 km.",
-    prioridade: "critico",
-    status: "pendente",
-    data: "2024-07-20",
-    km: 124300,
-    acao: "Agendar troca imediata",
-    responsavel: "Oficina Central",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 3,
-    veiculo: "Volvo FH 460",
-    placa: "MH02AB1234",
-    tipo: "manutencao",
-    titulo: "Revisão de freios urgente",
-    desc: "Sistema de freios com pressão abaixo do ideal. Risco de operação.",
-    prioridade: "critico",
-    status: "em_analise",
-    data: "2024-07-21",
-    km: 213800,
-    acao: "Parar veículo e revisar",
-    responsavel: "Scania Service",
-    resolvedAt: null,
-    obs: "Veículo em análise na oficina.",
-  },
-  {
-    id: 4,
-    veiculo: "Scania P 360",
-    placa: "TN09KL3344",
-    tipo: "manutencao",
-    titulo: "Falha no motor",
-    desc: "Sensor de temperatura do motor acusando superaquecimento acima de 110°C.",
-    prioridade: "critico",
-    status: "em_analise",
-    data: "2024-07-23",
-    km: 178900,
-    acao: "Diagnóstico imediato",
-    responsavel: "Scania Service",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 5,
-    veiculo: "Ashok Leyland 3718",
-    placa: "KA05MN9087",
-    tipo: "documento",
-    titulo: "Licença ambiental vencendo",
-    desc: "Licença ambiental do veículo vence em 7 dias.",
-    prioridade: "medio",
-    status: "pendente",
-    data: "2024-07-18",
-    km: 56200,
-    acao: "Renovar licença",
-    responsavel: "Dep. Administrativo",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 6,
-    veiculo: "Tata 407 Gold",
-    placa: "RJ14CD5566",
-    tipo: "revisao",
-    titulo: "Inspeção preventiva próxima",
-    desc: "Inspeção preventiva dos 32.000 km. Veículo disponível para agendamento.",
-    prioridade: "medio",
-    status: "pendente",
-    data: "2024-07-19",
-    km: 31800,
-    acao: "Agendar inspeção",
-    responsavel: "Frota Plus",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 7,
-    veiculo: "Mercedes Actros 2546",
-    placa: "UP32GH7712",
-    tipo: "pneu",
-    titulo: "Desgaste nos pneus traseiros",
-    desc: "Pneus traseiros com desgaste acima de 70%. Substituição recomendada.",
-    prioridade: "medio",
-    status: "pendente",
-    data: "2024-07-17",
-    km: 44100,
-    acao: "Substituir pneus",
-    responsavel: "Pneus Express",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 8,
-    veiculo: "Eicher Pro 2059",
-    placa: "GJ28HT2889",
-    tipo: "seguro",
-    titulo: "Seguro obrigatório a vencer",
-    desc: "Seguro DPVAT vence em 12 dias. Renovação necessária para circulação legal.",
-    prioridade: "medio",
-    status: "pendente",
-    data: "2024-07-16",
-    km: 87420,
-    acao: "Renovar seguro",
-    responsavel: "Corretora Frota",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 9,
-    veiculo: "Iveco Stralis 460",
-    placa: "WB28CD4499",
-    tipo: "combustivel",
-    titulo: "Consumo elevado de combustível",
-    desc: "Consumo 18% acima da média dos últimos 30 dias. Verificar injeção.",
-    prioridade: "medio",
-    status: "em_analise",
-    data: "2024-07-15",
-    km: 22500,
-    acao: "Verificar sistema de injeção",
-    responsavel: "Mecânica Rápida",
-    resolvedAt: null,
-    obs: "Em análise de telemetria.",
-  },
-  {
-    id: 10,
-    veiculo: "Tata Prima 4928S",
-    placa: "DL1PC4421",
-    tipo: "vencimento",
-    titulo: "Tacógrafo com calibração vencida",
-    desc: "Tacógrafo com lacre vencido há 22 dias. Multa em caso de fiscalização.",
-    prioridade: "medio",
-    status: "pendente",
-    data: "2024-07-14",
-    km: 124300,
-    acao: "Calibrar tacógrafo",
-    responsavel: "Oficina Autorizada",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 11,
-    veiculo: "Volvo FH 460",
-    placa: "MH02AB1234",
-    tipo: "documento",
-    titulo: "RNTRC prestes a vencer",
-    desc: "RNTRC (Registro Nacional de Transportadores) vence em 18 dias.",
-    prioridade: "baixo",
-    status: "pendente",
-    data: "2024-07-13",
-    km: 213800,
-    acao: "Renovar RNTRC",
-    responsavel: "Dep. Administrativo",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 12,
-    veiculo: "Ashok Leyland 3718",
-    placa: "KA05MN9087",
-    tipo: "manutencao",
-    titulo: "Alinhamento recomendado",
-    desc: "Quilometragem indica necessidade de alinhamento e balanceamento.",
-    prioridade: "baixo",
-    status: "pendente",
-    data: "2024-07-12",
-    km: 56200,
-    acao: "Agendar alinhamento",
-    responsavel: "Auto Center VH",
-    resolvedAt: null,
-    obs: "",
-  },
-  {
-    id: 13,
-    veiculo: "Scania P 360",
-    placa: "TN09KL3344",
-    tipo: "revisao",
-    titulo: "Troca de filtros programada",
-    desc: "Filtros de ar e combustível atingiram intervalo de substituição.",
-    prioridade: "baixo",
-    status: "resolvido",
-    data: "2024-07-10",
-    km: 178500,
-    acao: "",
-    responsavel: "Frota Plus",
-    resolvedAt: "2024-07-11 09:30",
-    obs: "Filtros substituídos com sucesso.",
-  },
-  {
-    id: 14,
-    veiculo: "Tata 407 Gold",
-    placa: "RJ14CD5566",
-    tipo: "documento",
-    titulo: "Renovação de CRLV concluída",
-    desc: "CRLV renovado e atualizado no sistema.",
-    prioridade: "baixo",
-    status: "resolvido",
-    data: "2024-07-08",
-    km: 31600,
-    acao: "",
-    responsavel: "Dep. Administrativo",
-    resolvedAt: "2024-07-09 14:15",
-    obs: "Documento físico arquivado.",
-  },
-];
-
-const activitySeed = [
-  {
-    title: "CRLV do Tata 407 renovado",
-    time: "Hoje · 14:15",
-    color: "var(--green)",
-  },
-  {
-    title: "Filtros do Scania substituídos",
-    time: "Ontem · 09:30",
-    color: "var(--green)",
-  },
-  { title: "Falha no motor do Scania", time: "Há 2 dias", color: "var(--red)" },
-  {
-    title: "Inspeção do Volvo iniciada",
-    time: "Há 3 dias",
-    color: "var(--amber)",
-  },
-  {
-    title: "Alerta de combustível gerado",
-    time: "Há 4 dias",
-    color: "var(--amber)",
-  },
-];
-
 function formatDate(value) {
   const [year, month, day] = value.split("-");
   return `${day}/${month}/${year}`;
+}
+
+function normalizeAlert(item) {
+  const vehicle = item.veiculo || {};
+  const createdAt =
+    item.criadoEm || item.createdAt || item.data || new Date().toISOString();
+
+  return {
+    id: item.id,
+    veiculo:
+      vehicle.modelo ||
+      vehicle.model ||
+      item.veiculoNome ||
+      item.vehicleName ||
+      "Sem veículo",
+    placa: vehicle.placa || vehicle.plate || item.placa || "",
+    tipo: String(item.tipo || "OUTRO").toLowerCase(),
+    titulo: item.titulo || item.title || "Alerta",
+    desc: item.mensagem || item.desc || item.message || "",
+    prioridade: String(item.prioridade || "MEDIO").toLowerCase(),
+    status: String(item.status || "PENDENTE").toLowerCase(),
+    data: String(createdAt).slice(0, 10),
+    km: Number(item.km ?? 0),
+    acao: item.acao || "",
+    responsavel: item.responsavel || "",
+    resolvedAt: item.resolvidoEm || item.resolvedAt || null,
+    obs: item.observacao || item.obs || "",
+  };
+}
+
+function buildActivityFromAlerts(alerts) {
+  return alerts
+    .slice()
+    .sort((a, b) => b.data.localeCompare(a.data))
+    .slice(0, 5)
+    .map((alert) => ({
+      title: alert.titulo,
+      time: alert.status === "resolvido" ? "Resolvido" : "Em aberto",
+      color:
+        alert.status === "resolvido"
+          ? "var(--green)"
+          : alert.prioridade === "critico"
+            ? "var(--red)"
+            : "var(--amber)",
+    }));
 }
 
 function getType(tipo) {
@@ -338,14 +136,38 @@ function InfoIcon({ type }) {
 }
 
 export function AlertsPage() {
-  const [alerts, setAlerts] = useState(alertsSeed);
-  const [activity, setActivity] = useState(activitySeed);
+  const [alerts, setAlerts] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [query, setQuery] = useState("");
   const [currentFilter, setCurrentFilter] = useState("todos");
   const [currentPriFilter, setCurrentPriFilter] = useState("all");
   const [sortNewest, setSortNewest] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    getAlerts({ limit: 100 })
+      .then((res) => {
+        if (!active) return;
+        const data = res.data?.data ?? [];
+        const normalized = data.map(normalizeAlert);
+        setAlerts(normalized);
+        setActivity(buildActivityFromAlerts(normalized));
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar alertas:", err);
+        if (active) {
+          setAlerts([]);
+          setActivity([]);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const selectedAlert = alerts.find((alert) => alert.id === selectedId) || null;
 
@@ -439,38 +261,34 @@ export function AlertsPage() {
     setTimeout(() => setToast(""), 3200);
   }
 
-  function resolveAlert(id) {
+  async function resolveAlert(id) {
     const original = alerts.find((item) => item.id === id);
     if (!original || original.status === "resolvido") return;
 
-    setAlerts((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: "resolvido",
-              resolvedAt: new Date().toLocaleString("pt-BR"),
-            }
-          : item,
-      ),
-    );
+    try {
+      const res = await resolveAlertRequest(id, { observacao: "" });
+      const saved = normalizeAlert(res.data?.data ?? res.data ?? original);
 
-    setActivity((prev) => {
-      const next = [
-        {
-          title: `${original.titulo} resolvido`,
-          time: "Agora",
-          color: "var(--green)",
-        },
-        ...prev,
-      ];
-      return next.slice(0, 6);
-    });
+      setAlerts((prev) => prev.map((item) => (item.id === id ? saved : item)));
+      setActivity((prev) =>
+        [
+          {
+            title: `${saved.titulo} resolvido`,
+            time: "Agora",
+            color: "var(--green)",
+          },
+          ...prev,
+        ].slice(0, 6),
+      );
 
-    showToast("Alerta marcado como resolvido!");
+      showToast("Alerta marcado como resolvido!");
+    } catch (err) {
+      console.error("Erro ao resolver alerta:", err);
+      showToast(err?.response?.data?.message || "Erro ao resolver alerta.");
+    }
   }
 
-  function resolveAllVisible() {
+  async function resolveAllVisible() {
     const target = filteredAlerts.filter((item) => item.status !== "resolvido");
 
     if (target.length === 0) {
@@ -478,33 +296,37 @@ export function AlertsPage() {
       return;
     }
 
-    const ids = new Set(target.map((item) => item.id));
+    try {
+      await Promise.all(
+        target.map((item) => resolveAlertRequest(item.id, { observacao: "" })),
+      );
+      setAlerts((prev) =>
+        prev.map((item) =>
+          target.some((resolved) => resolved.id === item.id)
+            ? {
+                ...item,
+                status: "resolvido",
+                resolvedAt: new Date().toISOString(),
+              }
+            : item,
+        ),
+      );
+      setActivity((prev) =>
+        [
+          {
+            title: `${target.length} alertas resolvidos`,
+            time: "Agora",
+            color: "var(--green)",
+          },
+          ...prev,
+        ].slice(0, 6),
+      );
 
-    setAlerts((prev) =>
-      prev.map((item) =>
-        ids.has(item.id)
-          ? {
-              ...item,
-              status: "resolvido",
-              resolvedAt: new Date().toLocaleString("pt-BR"),
-            }
-          : item,
-      ),
-    );
-
-    setActivity((prev) => {
-      const next = [
-        {
-          title: `${target.length} alertas resolvidos`,
-          time: "Agora",
-          color: "var(--green)",
-        },
-        ...prev,
-      ];
-      return next.slice(0, 6);
-    });
-
-    showToast(`${target.length} alertas marcados como resolvidos!`);
+      showToast(`${target.length} alertas marcados como resolvidos!`);
+    } catch (err) {
+      console.error("Erro ao resolver alertas visíveis:", err);
+      showToast(err?.response?.data?.message || "Erro ao resolver alertas.");
+    }
   }
 
   return (

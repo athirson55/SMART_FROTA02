@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useNavigate } from "react-router-dom";
 import { AppIcon } from "../components/AppIcon";
@@ -10,7 +10,79 @@ import { AppCard } from "../components/ui/AppCard";
 import { EmptyState } from "../components/ui/EmptyState";
 import { TableRow } from "../components/ui/TableRow";
 import { useUiFeedback } from "../context/UiFeedbackContext";
-import { fleetVehicles, getFleetSummary } from "../data/fleetDashboard";
+import { getVehicles } from "../services/vehicles";
+
+function normalizeDashboardVehicle(vehicle) {
+  const pendencies = (vehicle.pendencias ?? []).map((pending) => ({
+    slug: pending.slug,
+    label: pending.label,
+    detail: pending.detalhe || pending.detail || "",
+    tone:
+      String(pending.tom || pending.tone || "AMBER").toLowerCase() === "red"
+        ? "red"
+        : "gold",
+  }));
+
+  const status = vehicle.status || "ATIVO";
+  const statusTone =
+    status === "MANUTENCAO" ||
+    pendencies.some((pending) => pending.tone === "red")
+      ? "red"
+      : pendencies.length > 0
+        ? "gold"
+        : "green";
+
+  return {
+    id: vehicle.id,
+    model: vehicle.modelo || vehicle.model || "",
+    plate: vehicle.placa || vehicle.plate || "",
+    driver:
+      vehicle.motorista?.nome ||
+      vehicle.motorista?.name ||
+      vehicle.driver ||
+      "Sem motorista",
+    status:
+      status === "MANUTENCAO"
+        ? "Em manutenção"
+        : status === "INATIVO"
+          ? "Reserva"
+          : status === "EM_ROTA"
+            ? "Em rota"
+            : "Ativo",
+    statusTone,
+    pendencies,
+  };
+}
+
+function buildFleetSummary(vehicles) {
+  const pendingVehicles = vehicles.filter(
+    (vehicle) => vehicle.pendencies.length > 0,
+  );
+  const maintenancePending = vehicles.filter((vehicle) =>
+    vehicle.pendencies.some(
+      (pending) =>
+        pending.slug.includes("manutencao") ||
+        pending.slug.includes("troca") ||
+        pending.slug.includes("oleo"),
+    ),
+  ).length;
+  const documentsPending = vehicles.filter((vehicle) =>
+    vehicle.pendencies.some(
+      (pending) =>
+        pending.slug.includes("documento") ||
+        pending.slug.includes("crlv") ||
+        pending.slug.includes("licenciamento") ||
+        pending.slug.includes("seguro"),
+    ),
+  ).length;
+
+  return {
+    total: vehicles.length,
+    withPendencies: pendingVehicles.length,
+    maintenancePending,
+    documentsPending,
+  };
+}
 
 const summaryCards = [
   {
@@ -82,8 +154,28 @@ export function DashboardPage() {
   const [vehicleFilter, setVehicleFilter] = useState("");
   const [summaryModal, setSummaryModal] = useState(null);
   const [pendingModal, setPendingModal] = useState(null);
+  const [vehicles, setVehicles] = useState([]);
 
-  const summary = useMemo(() => getFleetSummary(fleetVehicles), []);
+  useEffect(() => {
+    let active = true;
+
+    getVehicles({ limit: 100 })
+      .then((res) => {
+        if (!active) return;
+        const data = res.data?.data ?? [];
+        setVehicles(data.map(normalizeDashboardVehicle));
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar veículos do dashboard:", err);
+        if (active) setVehicles([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const summary = useMemo(() => buildFleetSummary(vehicles), [vehicles]);
 
   const insights = useMemo(() => {
     const maintenanceWeight = (vehicle) =>
@@ -95,16 +187,16 @@ export function DashboardPage() {
       ).length;
 
     const mostMaintenanceVehicle =
-      fleetVehicles
+      vehicles
         .slice()
         .sort((a, b) => maintenanceWeight(b) - maintenanceWeight(a))[0] ?? null;
 
-    const totalCost = fleetVehicles.reduce((sum, vehicle) => {
+    const totalCost = vehicles.reduce((sum, vehicle) => {
       const base = vehicle.status === "Em manutenção" ? 9800 : 3400;
       return sum + base + vehicle.pendencies.length * 700;
     }, 0);
 
-    const criticalAlerts = fleetVehicles.reduce(
+    const criticalAlerts = vehicles.reduce(
       (count, vehicle) =>
         count +
         vehicle.pendencies.filter((pending) => pending.tone === "red").length,
@@ -116,12 +208,12 @@ export function DashboardPage() {
       totalCost,
       criticalAlerts,
     };
-  }, []);
+  }, [vehicles]);
 
   const filteredVehicles = useMemo(() => {
     const query = vehicleFilter.trim().toLowerCase();
 
-    return fleetVehicles
+    return vehicles
       .filter((vehicle) => {
         const matchesStatus =
           statusFilter === "Todos" || vehicle.status === statusFilter;
@@ -146,7 +238,7 @@ export function DashboardPage() {
 
         return left.id.localeCompare(right.id);
       });
-  }, [statusFilter, vehicleFilter]);
+  }, [statusFilter, vehicleFilter, vehicles]);
 
   const highestPendingCount = filteredVehicles.reduce(
     (max, vehicle) => Math.max(max, vehicle.pendencies.length),
@@ -157,7 +249,7 @@ export function DashboardPage() {
     const documentMatcher = /(doc|crlv|seguro|licen|vistoria)/i;
     const maintenanceMatcher = /(manuten|revis|oleo|óleo|freio|alinh)/i;
 
-    const items = fleetVehicles
+    const items = vehicles
       .filter((vehicle) => {
         if (card.key === "total") {
           return true;

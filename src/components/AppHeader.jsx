@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppIcon } from "./AppIcon";
-import { fleetVehicles } from "../data/fleetDashboard";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
+import { getVehicles } from "../services/vehicles";
+import { getAlerts } from "../services/alerts";
 
-function buildSearchPool() {
-  return fleetVehicles.map((vehicle) => ({
+function buildSearchPool(vehicles) {
+  return vehicles.map((vehicle) => ({
     id: vehicle.id,
     model: vehicle.model,
     plate: vehicle.plate,
@@ -117,34 +118,71 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [searchPool, setSearchPool] = useState([]);
   const isMobileViewport = useIsMobile(900);
   const mobileMode = isMobile || isMobileViewport;
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      vehicleId: "VEI-001",
-      label: "Documentação vencida",
-      detail: "CRLV vencida em 15/03",
-      route: "/pendencias/veh1/documento",
-    },
-    {
-      id: "notif-2",
-      vehicleId: "VEI-002",
-      label: "Manutenção preventiva",
-      detail: "Óleo devido em 500km",
-      route: "/pendencias/veh2/manutencao",
-    },
-    {
-      id: "notif-3",
-      vehicleId: "VEI-003",
-      label: "Revisão técnica",
-      detail: "Vencida há 30 dias",
-      route: "/pendencias/veh3/revisao",
-    },
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
-  const searchPool = useMemo(() => buildSearchPool(), []);
+  useEffect(() => {
+    let active = true;
+
+    getVehicles({ limit: 100 })
+      .then((res) => {
+        if (!active) return;
+        const data = res.data?.data ?? [];
+        setSearchPool(
+          buildSearchPool(
+            data.map((vehicle) => ({
+              id: vehicle.id,
+              model: vehicle.modelo || vehicle.model || "",
+              plate: vehicle.placa || vehicle.plate || "",
+              driver:
+                vehicle.motorista?.nome ||
+                vehicle.motorista?.name ||
+                vehicle.driver ||
+                "",
+            })),
+          ),
+        );
+      })
+      .catch(() => {
+        if (active) setSearchPool([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    getAlerts({ limit: 5, status: "todos" })
+      .then((res) => {
+        if (!active) return;
+        const data = res.data?.data ?? [];
+        const notificationsFromApi = data
+          .filter(
+            (item) => String(item.status || "").toUpperCase() !== "RESOLVIDO",
+          )
+          .map((item) => ({
+            id: item.id,
+            vehicleId: item.veiculo ? `${item.veiculo.placa || ""}`.trim() : "",
+            label: item.titulo || item.mensagem || "Alerta",
+            detail: item.mensagem || item.observacao || "Sem detalhes",
+            route: "/alertas",
+          }));
+        setNotifications(notificationsFromApi);
+      })
+      .catch(() => {
+        if (active) setNotifications([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const searchMatches = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

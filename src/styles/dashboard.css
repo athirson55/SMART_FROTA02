@@ -8,7 +8,7 @@
   background: #f4f6fb;
   font-family: "Inter", sans-serif;
   color: #1f2937;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .fg-home-shell {
@@ -219,6 +219,7 @@
   margin-left: 208px;
   overflow-y: auto;
   transition: margin-left 0.22s ease;
+  padding-bottom: 28px;
 }
 .fg-home-shell.is-collapsed .fg-home-main {
   margin-left: 56px;
@@ -253,6 +254,10 @@
   color: #7b8794;
   margin-top: 0;
   padding-top: 2px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-right: 8px;
+  scrollbar-width: thin;
   border-top: 1px solid #eef2f7;
 }
 .fg-page-breadcrumb a {
@@ -296,6 +301,7 @@
 
 .fg-home-search {
   width: 340px;
+  max-width: calc(100% - 8px);
   height: 38px;
   border-radius: 10px;
   border: 1px solid #d8dde6;
@@ -322,6 +328,7 @@
   font: inherit;
   font-size: 12px;
   outline: none;
+  min-width: 0;
 }
 .fg-home-search-input::placeholder {
   color: #9aa4b2;
@@ -522,8 +529,8 @@
   transform: translateY(1px);
 }
 .fg-home-user-avatar {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   background: #6757cb;
   color: #fff;
@@ -534,8 +541,8 @@
   overflow: hidden;
 }
 .fg-home-user-avatar-image {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   object-fit: cover;
   object-position: center;
@@ -1131,9 +1138,9 @@
   border-radius: 8px;
   background: #fff;
   color: #374151;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  padding: 0 10px;
+  padding: 0 12px;
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
@@ -1526,14 +1533,15 @@
 }
 .fg-vehicles-filter-bar button {
   height: 30px;
-  border-radius: 999px;
-  border: 1px solid #d8dde6;
-  background: #fff;
-  color: #6b7280;
-  font-size: 11px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
   font-weight: 600;
+  padding: 0 18px;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
+  height: 40px;
   gap: 6px;
   padding: 0 12px;
   cursor: pointer;
@@ -3230,9 +3238,16 @@
     height: auto;
     padding: 10px 12px;
     flex-wrap: wrap;
+    gap: 8px 12px;
   }
   .fg-home-search {
     width: min(260px, 100%);
+  }
+  .fg-home-header-left {
+    gap: 12px;
+  }
+  .fg-home-header-right {
+    gap: 8px;
   }
   .fg-home-summary-grid,
   .fg-home-actions-grid {
@@ -3349,6 +3364,10 @@
   .fg-home-search-input {
     font-size: 14px;
   }
+  .fg-home-search-submit {
+    width: 32px;
+    height: 32px;
+  }
   .fg-header-search-results {
     width: 100%;
   }
@@ -3418,6 +3437,13 @@
   .fg-maint-search-wrap,
   .fg-appt-search-wrap {
     width: 100%;
+  }
+  .fg-maint-search-wrap input,
+  .fg-appt-search-wrap input,
+  .fg-drivers-search-wrap input,
+  .fg-vehicles-search-wrap input {
+    min-height: 44px;
+    font-size: 14px;
   }
   .fg-drivers-toolbar-wrap {
     flex-direction: column;

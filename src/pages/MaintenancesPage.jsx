@@ -1,5 +1,5 @@
 import "../styles/dashboard.css";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { AppLayout } from "../components/AppLayout";
 import { AppHeader } from "../components/AppHeader";
@@ -8,119 +8,6 @@ import { getMaintenances, deleteMaintenance } from "../services/maintenances";
 import { getVehicles } from "../services/vehicles";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovaManutencaoModal } from "../components/NovaManutencaoModal";
-
-const maintenancesSeed = [
-  {
-    id: 1,
-    vehicle: "Eicher Pro 2059 — GJ28HT2889",
-    type: "preventiva",
-    description: "Troca de óleo e filtros",
-    date: "2024-07-22",
-    km: 87420,
-    cost: 380,
-    priority: "alta",
-    status: "pendente",
-  },
-  {
-    id: 2,
-    vehicle: "Volvo FH 460 — MH02AB1234",
-    type: "corretiva",
-    description: "Revisão completa de freios",
-    date: "2024-07-21",
-    km: 213800,
-    cost: 1250,
-    priority: "alta",
-    status: "em_andamento",
-  },
-  {
-    id: 3,
-    vehicle: "Scania P 360 — TN09KL3344",
-    type: "corretiva",
-    description: "Reparo no sistema de motor",
-    date: "2024-07-20",
-    km: 178900,
-    cost: 4200,
-    priority: "alta",
-    status: "em_andamento",
-  },
-  {
-    id: 4,
-    vehicle: "Tata Prima 4928S — DL1PC4421",
-    type: "preventiva",
-    description: "Alinhamento e balanceamento",
-    date: "2024-07-18",
-    km: 124300,
-    cost: 220,
-    priority: "media",
-    status: "concluida",
-  },
-  {
-    id: 5,
-    vehicle: "Ashok Leyland 3718 — KA05MN9087",
-    type: "preventiva",
-    description: "Inspeção preventiva geral",
-    date: "2024-08-02",
-    km: 56200,
-    cost: 180,
-    priority: "baixa",
-    status: "pendente",
-  },
-  {
-    id: 6,
-    vehicle: "Tata 407 Gold — RJ14CD5566",
-    type: "revisao",
-    description: "Revisão dos 30.000 km",
-    date: "2024-07-15",
-    km: 31800,
-    cost: 650,
-    priority: "media",
-    status: "concluida",
-  },
-  {
-    id: 7,
-    vehicle: "Mercedes Actros 2546 — UP32GH7712",
-    type: "preditiva",
-    description: "Análise de vibração na transmissão",
-    date: "2024-07-25",
-    km: 44100,
-    cost: 320,
-    priority: "media",
-    status: "pendente",
-  },
-  {
-    id: 8,
-    vehicle: "Iveco Stralis 460 — WB28CD4499",
-    type: "preventiva",
-    description: "Troca de pneus dianteiros",
-    date: "2024-07-10",
-    km: 22500,
-    cost: 1800,
-    priority: "alta",
-    status: "concluida",
-  },
-  {
-    id: 9,
-    vehicle: "Eicher Pro 2059 — GJ28HT2889",
-    type: "corretiva",
-    description: "Reparo no sistema elétrico",
-    date: "2024-06-28",
-    km: 85100,
-    cost: 540,
-    priority: "alta",
-    status: "concluida",
-  },
-  {
-    id: 10,
-    vehicle: "Tata Prima 4928S — DL1PC4421",
-    type: "revisao",
-    description: "Revisão semestral",
-    date: "2024-06-15",
-    km: 118500,
-    cost: 890,
-    priority: "media",
-    status: "concluida",
-  },
-];
 
 const typeLabels = {
   preventiva: "Preventiva",
@@ -143,15 +30,23 @@ const priorityLabels = {
 
 function normalizeMaintenance(item) {
   const vehicleInfo = item.veiculo || {};
+  const vehicleSource =
+    item.vehicle || item.veiculoLabel || item.veiculo || null;
   const vehicleLabel =
-    item.vehicle ||
-    item.veiculoLabel ||
-    [
-      vehicleInfo.modelo || vehicleInfo.model,
-      vehicleInfo.placa || vehicleInfo.plate,
-    ]
-      .filter(Boolean)
-      .join(" — ");
+    typeof vehicleSource === "object" && vehicleSource
+      ? [
+          vehicleSource.modelo || vehicleSource.model,
+          vehicleSource.placa || vehicleSource.plate,
+        ]
+          .filter(Boolean)
+          .join(" — ")
+      : vehicleSource ||
+        [
+          vehicleInfo.modelo || vehicleInfo.model,
+          vehicleInfo.placa || vehicleInfo.plate,
+        ]
+          .filter(Boolean)
+          .join(" — ");
 
   const rawDate = item.date || item.data || "";
   const normalizedDate = rawDate ? String(rawDate).slice(0, 10) : "";
@@ -211,6 +106,7 @@ export function MaintenancesPage() {
   const [sortBy, setSortBy] = useState("data_desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingMaintenance, setEditingMaintenance] = useState(null);
   const [veiculos, setVeiculos] = useState([]);
 
   // Carregar manutenções da API
@@ -218,27 +114,77 @@ export function MaintenancesPage() {
     getMaintenances({ limit: 100 })
       .then((res) => {
         const data = res.data?.data ?? [];
-        setMaintenances(data.map(normalizeMaintenance));
+        startTransition(() => {
+          setMaintenances(data.map(normalizeMaintenance));
+        });
       })
       .catch((err) => {
         console.error("Erro ao carregar manutenções:", err);
-        setMaintenances(maintenancesSeed); // Fallback
+        setMaintenances([]);
       });
   }, []);
 
-  function abrirModal() {
-    getVehicles({ limit: 100 })
-      .then((res) => {
+  async function abrirModal() {
+    setEditingMaintenance(null);
+    try {
+      const res = await getVehicles({ limit: 100 });
+      startTransition(() => {
         setVeiculos(res.data?.data ?? []);
-      })
-      .catch(() => setVeiculos([]));
-    setModalOpen(true);
+      });
+    } catch {
+      setVeiculos([]);
+    }
+
+    window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setModalOpen(true);
+      });
+    });
+  }
+
+  async function abrirEdicao(item) {
+    setEditingMaintenance(item);
+    try {
+      const res = await getVehicles({ limit: 100 });
+      startTransition(() => {
+        setVeiculos(res.data?.data ?? []);
+      });
+    } catch {
+      setVeiculos([]);
+    }
+
+    window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setModalOpen(true);
+      });
+    });
+  }
+
+  function fecharModal() {
+    setModalOpen(false);
+    setEditingMaintenance(null);
   }
 
   function handleManutencaoCriada(nova) {
     showSuccess("Manutenção criada com sucesso!");
     setModalOpen(false);
-    setMaintenances((prev) => [...prev, normalizeMaintenance(nova)]);
+    setEditingMaintenance(null);
+    const normalized = normalizeMaintenance(nova);
+    setMaintenances((prev) =>
+      prev.some((item) => item.id === normalized.id)
+        ? prev.map((item) => (item.id === normalized.id ? normalized : item))
+        : [...prev, normalized],
+    );
+  }
+
+  function handleManutencaoAtualizada(atualizada) {
+    const normalized = normalizeMaintenance(atualizada);
+    showSuccess("Manutenção atualizada com sucesso!");
+    setModalOpen(false);
+    setEditingMaintenance(null);
+    setMaintenances((prev) =>
+      prev.map((item) => (item.id === normalized.id ? normalized : item)),
+    );
   }
 
   function handleDeleteMaintenance(maintId) {
@@ -411,7 +357,7 @@ export function MaintenancesPage() {
             <div>
               <strong>
                 {formatCurrency(
-                  maintenancesSeed.reduce((sum, item) => sum + item.cost, 0),
+                  maintenances.reduce((sum, item) => sum + item.cost, 0),
                 )}
               </strong>
               <small>Custo total</small>
@@ -563,11 +509,23 @@ export function MaintenancesPage() {
                           <button
                             type="button"
                             aria-label="Visualizar manutenção"
+                            onClick={() => showSuccess(item.description)}
                           >
                             👁
                           </button>
-                          <button type="button" aria-label="Editar manutenção">
+                          <button
+                            type="button"
+                            aria-label="Editar manutenção"
+                            onClick={() => abrirEdicao(item)}
+                          >
                             ✎
+                          </button>
+                          <button
+                            type="button"
+                            aria-label="Remover manutenção"
+                            onClick={() => handleDeleteMaintenance(item.id)}
+                          >
+                            ×
                           </button>
                         </div>
                       </td>
@@ -611,9 +569,15 @@ export function MaintenancesPage() {
       </div>
       <NovaManutencaoModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={fecharModal}
         veiculos={veiculos}
         onCreated={handleManutencaoCriada}
+        onUpdated={handleManutencaoAtualizada}
+        initialValues={editingMaintenance}
+        title={editingMaintenance ? "Editar Manutenção" : "Nova Manutenção"}
+        submitLabel={
+          editingMaintenance ? "Salvar alterações" : "Registrar Manutenção"
+        }
       />
     </AppLayout>
   );

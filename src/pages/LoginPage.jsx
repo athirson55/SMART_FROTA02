@@ -8,11 +8,11 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showLoading, hideLoading, showSuccess, showError } = useUiFeedback();
-  const [email, setEmail]                   = useState("");
-  const [senha, setSenha]                   = useState("");
-  const [manterConectado, setManter]        = useState(false);
-  const [isLoading, setIsLoading]           = useState(false);
-  const [feedback, setFeedback]             = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [manterConectado, setManter] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -24,14 +24,24 @@ export function LoginPage() {
     setIsLoading(true);
     showLoading("Entrando...");
     try {
-      await login({ email: email.trim(), senha: senha.trim(), manterConectado });
+      await login({
+        email: email.trim(),
+        senha: senha.trim(),
+        manterConectado,
+      });
       showSuccess("Login realizado com sucesso");
+      await new Promise((resolve) =>
+        window.requestAnimationFrame(() => resolve()),
+      );
       navigate("/home");
     } catch (err) {
       const msg = err?.response?.data?.message || "E-mail ou senha incorretos.";
       setFeedback(msg);
       showError(msg);
-    } finally { setIsLoading(false); hideLoading(); }
+    } finally {
+      setIsLoading(false);
+      hideLoading();
+    }
   }
 
   return (
@@ -46,27 +56,48 @@ export function LoginPage() {
             <p>SOLUÇÕES EM FROTA</p>
           </div>
           <p className="login-card__heading">
-            <span>Acesse o </span><strong>PORTAL DE GESTÃO</strong>
+            <span>Acesse o </span>
+            <strong>PORTAL DE GESTÃO</strong>
           </p>
           <label className="login-field-group" htmlFor="email">
             <span className="login-field-group__label">EMAIL</span>
-            <input id="email" type="email" placeholder="Digite seu e-mail"
-              value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input
+              id="email"
+              type="email"
+              placeholder="Digite seu e-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </label>
           <label className="login-field-group" htmlFor="senha">
             <span className="login-field-group__label">SENHA</span>
-            <input id="senha" type="password" placeholder="Digite sua senha"
-              value={senha} onChange={(e) => setSenha(e.target.value)} required />
+            <input
+              id="senha"
+              type="password"
+              placeholder="Digite sua senha"
+              value={senha}
+              onChange={(e) => setSenha(e.target.value)}
+              required
+            />
           </label>
           <div className="login-meta-row">
             <label className="login-checkbox-row" htmlFor="manter">
-              <input id="manter" type="checkbox" checked={manterConectado}
-                onChange={(e) => setManter(e.target.checked)} />
+              <input
+                id="manter"
+                type="checkbox"
+                checked={manterConectado}
+                onChange={(e) => setManter(e.target.checked)}
+              />
               <span>Manter Conectado</span>
             </label>
             <Link to="/recuperar-senha">Recuperar senha</Link>
           </div>
-          <button className="login-submit-button" type="submit" disabled={isLoading}>
+          <button
+            className="login-submit-button"
+            type="submit"
+            disabled={isLoading}
+          >
             {isLoading ? "ENTRANDO..." : "ENTRAR"}
           </button>
           <p className="login-register-link">

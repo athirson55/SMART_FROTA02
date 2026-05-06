@@ -12,5 +12,11 @@ export default defineConfig({
     actionTimeout: 10000,
     ignoreHTTPSErrors: true,
   },
+  webServer: {
+    command: "npm run dev",
+    url: "http://localhost:5173",
+    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
+  },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });

@@ -7,7 +7,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: mode === "production" ? "/SMARTFROTA/" : "/",
+  base: mode === "production" ? "/SMART_FROTA02/" : "/",
   build: {
     rollupOptions: {
       input: {

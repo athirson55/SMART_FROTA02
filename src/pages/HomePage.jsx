@@ -1,60 +1,12 @@
 import "../styles/dashboard.css";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { AppIcon } from "../components/AppIcon";
 import { AppHeader } from "../components/AppHeader";
 import { QuickInfoModal } from "../components/QuickInfoModal";
 import { useAuth } from "../context/AuthContext";
-
-const summaryCards = [
-  {
-    title: "Documentos prestes a vencer",
-    description:
-      "Veículos com CRLV, seguro ou licença expirando em menos de 30 dias.",
-    value: "7",
-    valueClass: "is-gold",
-    tags: ["3 críticos", "4 atenção"],
-    action: "Ver detalhes",
-    route: "/alertas",
-    icon: "doc",
-    iconTone: "gold",
-  },
-  {
-    title: "Manutenções próximas",
-    description:
-      "Veículos com revisão, troca de óleo ou inspeção preventiva agendada.",
-    value: "4",
-    valueClass: "is-red",
-    tags: ["1 urgente", "3 esta semana"],
-    action: "Ver agenda",
-    route: "/manutencoes",
-    icon: "wrench",
-    iconTone: "red",
-  },
-  {
-    title: "Entregas atrasadas",
-    description: "Pedidos com prazo de entrega vencido ou em risco de atraso.",
-    value: "3",
-    valueClass: "is-purple",
-    tags: ["2 em rota", "1 parado"],
-    action: "Acompanhar",
-    route: "/agendamentos",
-    icon: "clock",
-    iconTone: "purple",
-  },
-  {
-    title: "Frota disponível",
-    description: "Veículos prontos para receber novos carregamentos agora.",
-    value: "12",
-    valueClass: "is-green",
-    tags: ["12 livres", "de 38 total"],
-    action: "Alocar frota",
-    route: "/veiculos",
-    icon: "truck",
-    iconTone: "green",
-  },
-];
+import { getDashboardReport } from "../services/reports";
 
 const quickActions = [
   {
@@ -87,46 +39,96 @@ const quickActions = [
   },
 ];
 
-const documentRows = [
-  ["GJ28HT2889 - Eicher Pro 2059", "CRLV - Vence em 3 dias", "3 dias", "red"],
-  [
-    "DL1PC4421 - Tata 407",
-    "Seguro obrigatório - Vence em 5 dias",
-    "5 dias",
-    "red",
-  ],
-  [
-    "MH02AB1234 - Volvo FH",
-    "Licença ambiental - Vence em 7 dias",
-    "7 dias",
-    "red",
-  ],
-  ["KA05MN9087 - Ashok Leyland", "CRLV - Vence em 18 dias", "18 dias", "amber"],
-  [
-    "RJ14CD5566 - Tata Prima",
-    "Vistoria técnica - Vence em 24 dias",
-    "24 dias",
-    "amber",
-  ],
-];
+function buildSummaryCards(report) {
+  return [
+    {
+      title: "Documentos prestes a vencer",
+      description:
+        "Alertas operacionais e documentos que precisam de atenção imediata.",
+      value: String(report.alertas?.pendentes ?? 0),
+      valueClass: "is-gold",
+      tags: [
+        `${report.alertas?.criticos ?? 0} críticos`,
+        `${report.alertas?.pendentes ?? 0} abertos`,
+      ],
+      action: "Ver detalhes",
+      route: "/alertas",
+      icon: "doc",
+      iconTone: "gold",
+    },
+    {
+      title: "Manutenções próximas",
+      description:
+        "Veículos com manutenção pendente ou em andamento no banco real.",
+      value: String(
+        (report.manutencoes?.pendentes ?? 0) +
+          (report.manutencoes?.emAndamento ?? 0),
+      ),
+      valueClass: "is-red",
+      tags: [
+        `${report.manutencoes?.pendentes ?? 0} pendentes`,
+        `${report.manutencoes?.emAndamento ?? 0} em andamento`,
+      ],
+      action: "Ver agenda",
+      route: "/manutencoes",
+      icon: "wrench",
+      iconTone: "red",
+    },
+    {
+      title: "Entregas atrasadas",
+      description:
+        "Agendamentos críticos e próximos para acompanhamento operacional.",
+      value: String(report.agendamentos?.proximos ?? 0),
+      valueClass: "is-purple",
+      tags: [
+        `${report.agendamentos?.proximos ?? 0} próximos`,
+        `${report.motoristas?.emRota ?? 0} em rota`,
+      ],
+      action: "Acompanhar",
+      route: "/agendamentos",
+      icon: "clock",
+      iconTone: "purple",
+    },
+    {
+      title: "Frota disponível",
+      description: "Veículos ativos e prontos para operação.",
+      value: String(report.veiculos?.ativos ?? 0),
+      valueClass: "is-green",
+      tags: [
+        `${report.veiculos?.ativos ?? 0} ativos`,
+        `${report.veiculos?.total ?? 0} total`,
+      ],
+      action: "Alocar frota",
+      route: "/veiculos",
+      icon: "truck",
+      iconTone: "green",
+    },
+  ];
+}
 
-const maintenanceRows = [
-  ["SHP003 - GJ28HT2889", "Troca de óleo - Amanhã às 08:00", "Amanhã", "red"],
-  ["SHP005 - DL1PC4421", "Revisão de freios - 25 Jul 2024", "3 dias", "amber"],
-  [
-    "SHP008 - MH02AB1234",
-    "Alinhamento e balanceamento - 27 Jul 2024",
-    "5 dias",
-    "amber",
-  ],
-  [
-    "SHP010 - KA05MN9087",
-    "Inspeção preventiva - 02 Ago 2024",
-    "11 dias",
-    "green",
-  ],
-  ["SHP012 - RJ14CD5566", "Troca de filtros - 05 Ago 2024", "14 dias", "green"],
-];
+function buildAlertRows(report) {
+  return (report.alertasRecentes ?? []).map((alert) => [
+    `${alert.veiculo?.placa || ""} - ${alert.veiculo?.modelo || "Sem veículo"}`.trim(),
+    `${alert.titulo}${alert.prioridade ? ` - ${String(alert.prioridade).toLowerCase()}` : ""}`,
+    alert.status === "RESOLVIDO" ? "Resolvido" : "Em aberto",
+    alert.status === "RESOLVIDO"
+      ? "green"
+      : alert.prioridade === "CRITICO"
+        ? "red"
+        : "amber",
+  ]);
+}
+
+function buildMaintenanceRows(report) {
+  return (report.veiculosComPendencias ?? []).map((vehicle) => [
+    `${vehicle.placa} - ${vehicle.modelo}`,
+    `${vehicle.pendencias?.[0]?.label || "Pendência registrada"}`,
+    vehicle.pendencias?.length
+      ? `${vehicle.pendencias.length} pendência(s)`
+      : "Sem pendências",
+    vehicle.pendencias?.length > 1 ? "red" : "amber",
+  ]);
+}
 
 function Row({ row }) {
   return (
@@ -145,65 +147,66 @@ export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [summaryModal, setSummaryModal] = useState(null);
+  const [dashboard, setDashboard] = useState({
+    veiculos: {},
+    motoristas: {},
+    manutencoes: {},
+    alertas: {},
+    agendamentos: {},
+    veiculosComPendencias: [],
+    alertasRecentes: [],
+  });
 
   const displayName = user?.nome || user?.name || "Usuário";
 
+  useEffect(() => {
+    let active = true;
+
+    getDashboardReport()
+      .then((res) => {
+        if (!active) return;
+        setDashboard(res.data?.data ?? {});
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar dashboard:", err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const summaryCards = useMemo(() => buildSummaryCards(dashboard), [dashboard]);
+  const documentRows = useMemo(() => buildAlertRows(dashboard), [dashboard]);
+  const maintenanceRows = useMemo(
+    () => buildMaintenanceRows(dashboard),
+    [dashboard],
+  );
+
   function openSummaryModal(card) {
     const itemsByTitle = {
-      "Documentos prestes a vencer": [
-        {
-          title: "GJ28HT2889 - Eicher Pro 2059",
-          subtitle: "CRLV e seguro com vencimento curto",
-        },
-        {
-          title: "DL1PC4421 - Tata 407",
-          subtitle: "Seguro obrigatório próximo do prazo",
-        },
-        {
-          title: "RJ14CD5566 - Tata Prima",
-          subtitle: "Vistoria técnica em janela crítica",
-        },
-      ],
-      "Manutenções próximas": [
-        {
-          title: "SHP003 - GJ28HT2889",
-          subtitle: "Troca de óleo marcada para amanhã",
-        },
-        {
-          title: "SHP005 - DL1PC4421",
-          subtitle: "Revisão de freios pendente",
-        },
-        {
-          title: "SHP008 - MH02AB1234",
-          subtitle: "Alinhamento programado esta semana",
-        },
-      ],
+      "Documentos prestes a vencer": (dashboard.alertasRecentes ?? [])
+        .slice(0, 3)
+        .map((alert) => ({
+          title: `${alert.veiculo?.placa || ""} - ${alert.veiculo?.modelo || "Sem veículo"}`,
+          subtitle: alert.titulo,
+        })),
+      "Manutenções próximas": (dashboard.veiculosComPendencias ?? [])
+        .slice(0, 3)
+        .map((vehicle) => ({
+          title: `${vehicle.placa} - ${vehicle.modelo}`,
+          subtitle: vehicle.pendencias?.[0]?.label || "Pendência registrada",
+        })),
       "Entregas atrasadas": [
         {
-          title: "Pedido #4321",
-          subtitle: "Atraso por retenção em rota",
-        },
-        {
-          title: "Pedido #4288",
-          subtitle: "Chegada acima do SLA previsto",
-        },
-        {
-          title: "Pedido #4269",
-          subtitle: "Veículo parado aguardando liberação",
+          title: `${dashboard.agendamentos?.proximos ?? 0} próximos`,
+          subtitle: "Agendamentos vindos do backend",
         },
       ],
       "Frota disponível": [
         {
-          title: "12 veículos liberados",
-          subtitle: "Prontos para novo carregamento",
-        },
-        {
-          title: "8 já em trânsito",
-          subtitle: "Cobertura operacional ativa",
-        },
-        {
-          title: "18 com janela flexível",
-          subtitle: "Podem ser realocados no turno",
+          title: `${dashboard.veiculos?.ativos ?? 0} veículos ativos`,
+          subtitle: "Dados carregados via API real",
         },
       ],
     };
@@ -232,15 +235,15 @@ export function HomePage() {
             </div>
             <div className="fg-home-kpis">
               <article>
-                <strong>24</strong>
+                <strong>{dashboard.agendamentos?.proximos ?? 0}</strong>
                 <span>Pedidos hoje</span>
               </article>
               <article>
-                <strong>8</strong>
+                <strong>{dashboard.motoristas?.emRota ?? 0}</strong>
                 <span>Em trânsito</span>
               </article>
               <article>
-                <strong>5</strong>
+                <strong>{dashboard.alertas?.pendentes ?? 0}</strong>
                 <span>Alertas</span>
               </article>
             </div>

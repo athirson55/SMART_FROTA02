@@ -1,10 +1,57 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { SimpleSectionPage } from "./SimpleSectionPage";
-import { getPendingDetail } from "../data/fleetDashboard";
+import { getVehicle } from "../services/vehicles";
+
+function normalizePending(pending) {
+  return {
+    slug: pending.slug,
+    label: pending.label,
+    detail: pending.detalhe || pending.detail || "",
+  };
+}
+
+function normalizeVehicle(vehicle) {
+  return {
+    id: vehicle.id,
+    model: vehicle.modelo || vehicle.model || "",
+    plate: vehicle.placa || vehicle.plate || "",
+    status: vehicle.status || "ATIVO",
+    driver:
+      vehicle.motorista?.nome ||
+      vehicle.motorista?.name ||
+      vehicle.driver ||
+      "",
+    pendencies: (vehicle.pendencias ?? []).map(normalizePending),
+  };
+}
 
 export function PendingDetailPage() {
   const { vehicleId, pendingSlug } = useParams();
-  const detail = getPendingDetail(vehicleId, pendingSlug);
+  const [detail, setDetail] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    getVehicle(vehicleId)
+      .then((res) => {
+        if (!active) return;
+
+        const vehicle = normalizeVehicle(res.data?.data ?? {});
+        const pending =
+          vehicle.pendencies.find((item) => item.slug === pendingSlug) ?? null;
+
+        setDetail({ vehicle, pending });
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar detalhe da pendência:", err);
+        if (active) setDetail(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [pendingSlug, vehicleId]);
 
   if (!detail || !detail.vehicle) {
     return (
@@ -37,18 +84,24 @@ export function PendingDetailPage() {
         <article className="fg-home-summary-card">
           <div className="fg-home-summary-title-row">
             <span className="fg-home-summary-icon red">!</span>
-            <h4>{pending ? pending.label : "Pendência não localizada"}</h4>
+            <h4>
+              {detail.pending
+                ? detail.pending.label
+                : "Pendência não localizada"}
+            </h4>
           </div>
           <p>
-            {pending
-              ? pending.detail
+            {detail.pending
+              ? detail.pending.detail
               : "Esta pendência não está disponível para consulta."}
           </p>
-          <strong className="fg-home-summary-value is-red">{vehicle.id}</strong>
+          <strong className="fg-home-summary-value is-red">
+            {detail.vehicle.id}
+          </strong>
           <div className="fg-home-summary-footer">
             <div className="fg-home-tag-list">
-              <span>{vehicle.model}</span>
-              <span>{vehicle.plate}</span>
+              <span>{detail.vehicle.model}</span>
+              <span>{detail.vehicle.plate}</span>
             </div>
             <Link to="/dashboard">Voltar ao dashboard</Link>
           </div>
@@ -57,25 +110,27 @@ export function PendingDetailPage() {
         <article className="fg-home-list-card">
           <div className="fg-home-list-head">
             <h4>Informações do veículo</h4>
-            <small>{vehicle.status}</small>
+            <small>{detail.vehicle.status}</small>
           </div>
           <div className="fg-home-list-body">
             <div className="fg-home-row">
               <div className="fg-home-row-main">
                 <strong>Modelo / Marca</strong>
-                <p>{vehicle.model}</p>
+                <p>{detail.vehicle.model}</p>
               </div>
             </div>
             <div className="fg-home-row">
               <div className="fg-home-row-main">
                 <strong>Motorista responsável</strong>
-                <p>{vehicle.driver}</p>
+                <p>{detail.vehicle.driver}</p>
               </div>
             </div>
             <div className="fg-home-row">
               <div className="fg-home-row-main">
                 <strong>Pendências abertas</strong>
-                <p>{vehicle.pendencies.length} itens em acompanhamento</p>
+                <p>
+                  {detail.vehicle.pendencies.length} itens em acompanhamento
+                </p>
               </div>
             </div>
           </div>

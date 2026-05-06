@@ -19,10 +19,7 @@ export function AppLayout({ children }) {
 
     window.addEventListener("smart-frota:open-sidebar", handleOpenSidebar);
     return () =>
-      window.removeEventListener(
-        "smart-frota:open-sidebar",
-        handleOpenSidebar,
-      );
+      window.removeEventListener("smart-frota:open-sidebar", handleOpenSidebar);
   }, [isMobile]);
 
   function openDrawer() {
@@ -54,12 +51,6 @@ export function AppLayout({ children }) {
         <Sidebar
           isOpen={isSidebarOpen}
           isMobile={isMobile}
-          onMouseEnter={
-            isMobile ? undefined : () => setIsSidebarOpen(true)
-          }
-          onMouseLeave={
-            isMobile ? undefined : () => setIsSidebarOpen(false)
-          }
           onClose={closeDrawer}
         />
 

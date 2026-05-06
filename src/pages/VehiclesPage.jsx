@@ -5,7 +5,6 @@ import { AppIcon } from "../components/AppIcon";
 import { AppHeader } from "../components/AppHeader";
 import { AppLayout } from "../components/AppLayout";
 import { EmptyState } from "../components/ui/EmptyState";
-import { vehiclesData } from "../data/vehicles";
 import { getVehicles, deleteVehicle } from "../services/vehicles";
 import { getDrivers } from "../services/drivers";
 import { useUiFeedback } from "../context/UiFeedbackContext";
@@ -74,6 +73,7 @@ export function VehiclesPage() {
   const { showSuccess, showInfo, showError } = useUiFeedback();
   const [vehicles, setVehicles] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingVehicle, setEditingVehicle] = useState(null);
   const [motoristas, setMotoristas] = useState([]);
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [query, setQuery] = useState(() => searchParams.get("search") ?? "");
@@ -87,26 +87,59 @@ export function VehiclesPage() {
       })
       .catch((err) => {
         console.error("Erro ao carregar veículos:", err);
-        setVehicles(vehiclesData); // Fallback para dados mockados
+        setVehicles([]);
       });
   }, []);
 
+  function carregarMotoristas() {
+    getDrivers({ limit: 100 })
+      .then((res) => {
+        setMotoristas(res.data?.data ?? []);
+      })
+      .catch(() => setMotoristas([]));
+  }
+
   function abrirModal() {
-    import("../services/drivers").then(({ getDrivers: getDriversService }) => {
-      getDriversService({ limit: 100 })
-        .then((res) => {
-          setMotoristas(res.data?.data ?? []);
-        })
-        .catch(() => setMotoristas([]));
-    });
+    setEditingVehicle(null);
+    carregarMotoristas();
     setModalOpen(true);
+  }
+
+  function abrirEdicao(vehicle) {
+    setEditingVehicle(vehicle);
+    carregarMotoristas();
+    setModalOpen(true);
+  }
+
+  function fecharModal() {
+    setModalOpen(false);
+    setEditingVehicle(null);
   }
 
   function handleVeiculoCriado(novoVeiculo) {
     const normalizedVehicle = normalizeVehicle(novoVeiculo);
     showSuccess(`Veículo ${normalizedVehicle.plate || ""} cadastrado!`);
     setModalOpen(false);
-    setVehicles((prev) => [...prev, normalizedVehicle]);
+    setEditingVehicle(null);
+    setVehicles((prev) =>
+      prev.some((vehicle) => vehicle.id === normalizedVehicle.id)
+        ? prev.map((vehicle) =>
+            vehicle.id === normalizedVehicle.id ? normalizedVehicle : vehicle,
+          )
+        : [...prev, normalizedVehicle],
+    );
+  }
+
+  function handleVeiculoAtualizado(veiculoAtualizado) {
+    const normalizedVehicle = normalizeVehicle(veiculoAtualizado);
+    showSuccess(`Veículo ${normalizedVehicle.plate || ""} atualizado!`);
+    setModalOpen(false);
+    setEditingVehicle(null);
+    setVehicles((prev) =>
+      prev.map((vehicle) =>
+        vehicle.id === normalizedVehicle.id ? normalizedVehicle : vehicle,
+      ),
+    );
   }
 
   function handleDeleteVehicle(vehicleId, vehiclePlate) {
@@ -329,6 +362,28 @@ export function VehiclesPage() {
                   >
                     {vehicle.status}
                   </span>
+                  <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+                    <button
+                      type="button"
+                      aria-label={`Editar ${vehicle.plate}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        abrirEdicao(vehicle);
+                      }}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Remover ${vehicle.plate}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleDeleteVehicle(vehicle.id, vehicle.plate);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
 
                 <div className="fg-vehicle-specs">
@@ -385,9 +440,13 @@ export function VehiclesPage() {
       </div>
       <NovoVeiculoModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={fecharModal}
         motoristas={motoristas}
         onCreated={handleVeiculoCriado}
+        onUpdated={handleVeiculoAtualizado}
+        initialValues={editingVehicle}
+        title={editingVehicle ? "Editar Veículo" : "Cadastro de Veículo"}
+        submitLabel={editingVehicle ? "Salvar alterações" : "Cadastrar Veículo"}
       />
     </AppLayout>
   );

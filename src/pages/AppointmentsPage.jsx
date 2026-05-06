@@ -10,75 +10,6 @@ import { getVehicles } from "../services/vehicles";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovoAgendamentoModal } from "../components/NovoAgendamentoModal";
 
-const scheduleSeed = [
-  {
-    id: 1,
-    vehicle: "Eicher Pro 2059",
-    plate: "GJ28HT2889",
-    type: "Troca de oleo",
-    date: "2026-04-21",
-    time: "08:00",
-    km: 90000,
-    owner: "Frota Plus",
-    done: false,
-  },
-  {
-    id: 2,
-    vehicle: "Tata Prima 4928S",
-    plate: "DL1PC4421",
-    type: "Revisao de freios",
-    date: "2026-04-27",
-    time: "09:00",
-    km: 126000,
-    owner: "Oficina Central",
-    done: false,
-  },
-  {
-    id: 3,
-    vehicle: "Volvo FH 460",
-    plate: "MH02AB1234",
-    type: "Alinhamento",
-    date: "2026-04-30",
-    time: "10:00",
-    km: 215000,
-    owner: "Auto Center VH",
-    done: false,
-  },
-  {
-    id: 4,
-    vehicle: "Scania P 360",
-    plate: "TN09KL3344",
-    type: "Corretiva",
-    date: "2026-04-20",
-    time: "07:00",
-    km: 180000,
-    owner: "Scania Service",
-    done: false,
-  },
-  {
-    id: 5,
-    vehicle: "Iveco Stralis 460",
-    plate: "WB28CD4499",
-    type: "Troca de pneus",
-    date: "2026-05-15",
-    time: "13:00",
-    km: 24000,
-    owner: "Pneus Express",
-    done: true,
-  },
-  {
-    id: 6,
-    vehicle: "Tata 407 Gold",
-    plate: "RJ14CD5566",
-    type: "Troca de filtros",
-    date: "2026-05-02",
-    time: "11:30",
-    km: 33000,
-    owner: "Frota Plus",
-    done: true,
-  },
-];
-
 const filterItems = [
   { key: "todos", label: "Todos" },
   { key: "agendado", label: "Agendado" },
@@ -152,7 +83,7 @@ function normalizeAppointment(item) {
   };
 }
 
-function AppointmentCard({ item }) {
+function AppointmentCard({ item, actions }) {
   return (
     <article className="fg-appt-mobile-card">
       <div className="fg-appt-mobile-card-head">
@@ -188,6 +119,10 @@ function AppointmentCard({ item }) {
           <strong>{item.owner}</strong>
         </div>
       </div>
+
+      {actions ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>{actions}</div>
+      ) : null}
     </article>
   );
 }
@@ -200,6 +135,7 @@ export function AppointmentsPage() {
   const [monthOffset, setMonthOffset] = useState(0);
   const isMobile = useIsMobile(900);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
   const [veiculos, setVeiculos] = useState([]);
 
   // Carregar agendamentos da API
@@ -211,12 +147,13 @@ export function AppointmentsPage() {
       })
       .catch((err) => {
         console.error("Erro ao carregar agendamentos:", err);
-        setAppointments(scheduleSeed); // Fallback
+        setAppointments([]);
       });
   }, []);
 
   // Carrega veículos para o select do modal
   function abrirModal() {
+    setEditingAppointment(null);
     getVehicles({ limit: 100 })
       .then((res) => {
         setVeiculos(res.data?.data ?? []);
@@ -225,10 +162,41 @@ export function AppointmentsPage() {
     setModalOpen(true);
   }
 
+  function abrirEdicao(item) {
+    setEditingAppointment(item);
+    getVehicles({ limit: 100 })
+      .then((res) => {
+        setVeiculos(res.data?.data ?? []);
+      })
+      .catch(() => setVeiculos([]));
+    setModalOpen(true);
+  }
+
+  function fecharModal() {
+    setModalOpen(false);
+    setEditingAppointment(null);
+  }
+
   function handleAgendamentoCriado(novoAgend) {
     showSuccess("Agendamento criado com sucesso!");
     setModalOpen(false);
-    setAppointments((prev) => [...prev, normalizeAppointment(novoAgend)]);
+    setEditingAppointment(null);
+    const normalized = normalizeAppointment(novoAgend);
+    setAppointments((prev) =>
+      prev.some((item) => item.id === normalized.id)
+        ? prev.map((item) => (item.id === normalized.id ? normalized : item))
+        : [...prev, normalized],
+    );
+  }
+
+  function handleAgendamentoAtualizado(atualizado) {
+    const normalized = normalizeAppointment(atualizado);
+    showSuccess("Agendamento atualizado com sucesso!");
+    setModalOpen(false);
+    setEditingAppointment(null);
+    setAppointments((prev) =>
+      prev.map((item) => (item.id === normalized.id ? normalized : item)),
+    );
   }
 
   function handleDeleteAppointment(apptId) {
@@ -241,6 +209,27 @@ export function AppointmentsPage() {
         console.error("Erro ao remover agendamento:", err);
         showError("Erro ao remover agendamento");
       });
+  }
+
+  function renderActions(item) {
+    return (
+      <>
+        <button
+          type="button"
+          aria-label="Editar agendamento"
+          onClick={() => abrirEdicao(item)}
+        >
+          ✎
+        </button>
+        <button
+          type="button"
+          aria-label="Remover agendamento"
+          onClick={() => handleDeleteAppointment(item.id)}
+        >
+          ×
+        </button>
+      </>
+    );
   }
 
   const enriched = useMemo(
@@ -482,7 +471,11 @@ export function AppointmentsPage() {
               {isMobile ? (
                 <div className="fg-appt-mobile-list">
                   {filtered.map((item) => (
-                    <AppointmentCard key={item.id} item={item} />
+                    <AppointmentCard
+                      key={item.id}
+                      item={item}
+                      actions={renderActions(item)}
+                    />
                   ))}
                 </div>
               ) : (
@@ -496,6 +489,7 @@ export function AppointmentsPage() {
                         <th>Km previsto</th>
                         <th>Status</th>
                         <th>Responsavel</th>
+                        <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -526,6 +520,7 @@ export function AppointmentsPage() {
                             </span>
                           </td>
                           <td>{item.owner}</td>
+                          <td>{renderActions(item)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -547,9 +542,15 @@ export function AppointmentsPage() {
       </div>
       <NovoAgendamentoModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={fecharModal}
         veiculos={veiculos}
         onCreated={handleAgendamentoCriado}
+        onUpdated={handleAgendamentoAtualizado}
+        initialValues={editingAppointment}
+        title={editingAppointment ? "Editar Agendamento" : "Novo Agendamento"}
+        submitLabel={
+          editingAppointment ? "Salvar alterações" : "Criar Agendamento"
+        }
       />
     </AppLayout>
   );

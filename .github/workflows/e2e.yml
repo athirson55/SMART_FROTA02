@@ -38,8 +38,8 @@ jobs:
       - name: Setup Node.js (LTS)
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*'
-          cache: 'npm'
+          node-version: "lts/*"
+          cache: "npm"
 
       - name: Cache backend node_modules
         uses: actions/cache@v4

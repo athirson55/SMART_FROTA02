@@ -1,11 +1,10 @@
 import "../styles/dashboard.css";
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { AppLayout } from "../components/AppLayout";
 import { AppHeader } from "../components/AppHeader";
 import { AppIcon } from "../components/AppIcon";
 import { EmptyState } from "../components/ui/EmptyState";
-import { driversData } from "../data/drivers";
 import { getDrivers, deleteDriver } from "../services/drivers";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { AdicionarMotoristaModal } from "../components/AdicionarMotoristaModal";
@@ -23,6 +22,17 @@ function normalizeDriver(driver) {
     .join("")
     .toUpperCase();
 
+  const vehicleSource = driver.vehicle || driver.veiculo || null;
+  const vehicle =
+    typeof vehicleSource === "object" && vehicleSource
+      ? [
+          vehicleSource.modelo || vehicleSource.model,
+          vehicleSource.placa || vehicleSource.plate,
+        ]
+          .filter(Boolean)
+          .join(" — ")
+      : vehicleSource || "Sem veículo";
+
   return {
     ...driver,
     name: driver.name || driver.nome || "",
@@ -32,7 +42,7 @@ function normalizeDriver(driver) {
     cnh: driver.cnh || "",
     category: driver.category || driver.cnhCategoria || "",
     status: driver.status || "Disponível",
-    vehicle: driver.vehicle || driver.veiculo || "Sem veículo",
+    vehicle,
     initials,
     avatarTone: driver.avatarTone || driver.avatarCor || "blue",
   };
@@ -59,6 +69,7 @@ export function DriversPage() {
   const { showInfo, showSuccess, showError } = useUiFeedback();
   const [drivers, setDrivers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState(null);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [viewMode, setViewMode] = useState("table");
@@ -68,11 +79,13 @@ export function DriversPage() {
     getDrivers({ limit: 100 })
       .then((res) => {
         const data = res.data?.data ?? [];
-        setDrivers(data.map(normalizeDriver));
+        startTransition(() => {
+          setDrivers(data.map(normalizeDriver));
+        });
       })
       .catch((err) => {
         console.error("Erro ao carregar motoristas:", err);
-        setDrivers(driversData); // Fallback para dados mockados
+        setDrivers([]);
       });
   }, []);
 
@@ -80,7 +93,26 @@ export function DriversPage() {
     const normalizedDriver = normalizeDriver(novoMotorista);
     showSuccess("Motorista " + (normalizedDriver.name || "") + " adicionado!");
     setModalOpen(false);
-    setDrivers((prev) => [...prev, normalizedDriver]);
+    setEditingDriver(null);
+    setDrivers((prev) =>
+      prev.some((driver) => driver.id === normalizedDriver.id)
+        ? prev.map((driver) =>
+            driver.id === normalizedDriver.id ? normalizedDriver : driver,
+          )
+        : [...prev, normalizedDriver],
+    );
+  }
+
+  function handleMotoristaAtualizado(motoristaAtualizado) {
+    const normalizedDriver = normalizeDriver(motoristaAtualizado);
+    showSuccess("Motorista atualizado com sucesso!");
+    setModalOpen(false);
+    setEditingDriver(null);
+    setDrivers((prev) =>
+      prev.map((driver) =>
+        driver.id === normalizedDriver.id ? normalizedDriver : driver,
+      ),
+    );
   }
 
   function handleDeleteDriver(driverId, driverName) {
@@ -93,6 +125,29 @@ export function DriversPage() {
         console.error("Erro ao remover motorista:", err);
         showError("Erro ao remover motorista");
       });
+  }
+
+  function abrirModal() {
+    window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setEditingDriver(null);
+        setModalOpen(true);
+      });
+    });
+  }
+
+  function abrirEdicao(driver) {
+    window.requestAnimationFrame(() => {
+      startTransition(() => {
+        setEditingDriver(driver);
+        setModalOpen(true);
+      });
+    });
+  }
+
+  function fecharModal() {
+    setModalOpen(false);
+    setEditingDriver(null);
   }
 
   const counters = useMemo(() => {
@@ -154,7 +209,7 @@ export function DriversPage() {
           <button
             type="button"
             className="fg-home-new-btn"
-            onClick={() => setModalOpen(true)}
+            onClick={abrirModal}
           >
             <span>+</span> Adicionar Motorista
           </button>
@@ -313,7 +368,7 @@ export function DriversPage() {
                           <button
                             type="button"
                             aria-label={`Editar ${driver.name}`}
-                            onClick={() => showInfo(`Editar ${driver.name}`)}
+                            onClick={() => abrirEdicao(driver)}
                           >
                             ✎
                           </button>
@@ -357,6 +412,26 @@ export function DriversPage() {
                   </div>
                 </div>
 
+                <div
+                  className="fg-driver-actions"
+                  style={{ justifyContent: "flex-end", marginTop: 12 }}
+                >
+                  <button
+                    type="button"
+                    aria-label={`Editar ${driver.name}`}
+                    onClick={() => abrirEdicao(driver)}
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remover ${driver.name}`}
+                    onClick={() => handleDeleteDriver(driver.id, driver.name)}
+                  >
+                    ×
+                  </button>
+                </div>
+
                 <div className="fg-driver-card-rows">
                   <div>
                     <small>Email</small>
@@ -396,8 +471,14 @@ export function DriversPage() {
       </div>
       <AdicionarMotoristaModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={fecharModal}
         onCreated={handleMotoristaCriado}
+        onUpdated={handleMotoristaAtualizado}
+        initialValues={editingDriver}
+        title={editingDriver ? "Editar Motorista" : "Adicionar Motorista"}
+        submitLabel={
+          editingDriver ? "Salvar alterações" : "Adicionar Motorista"
+        }
       />
     </AppLayout>
   );
