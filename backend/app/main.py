@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -12,18 +13,25 @@ from app.middlewares.rate_limit import SimpleRateLimitMiddleware
 from app.routes import alerts, appointments, auth, drivers, health, maintenances, notifications, reports, settings as settings_routes, users, vehicles
 
 app_settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if app_settings.auto_create_tables:
-        create_tables()
-    if app_settings.seed_on_startup:
-        db = SessionLocal()
         try:
-            seed_database(db)
-        finally:
-            db.close()
+            create_tables()
+        except Exception as exc:
+            logger.warning("Nao foi possivel criar as tabelas no startup: %s", exc)
+    if app_settings.seed_on_startup:
+        try:
+            db = SessionLocal()
+            try:
+                seed_database(db)
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.warning("Nao foi possivel semear o banco no startup: %s", exc)
     yield
 
 
