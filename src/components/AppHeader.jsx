@@ -234,8 +234,8 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
     navigate(`/veiculos?search=${encodeURIComponent(item.id)}`);
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     navigate("/login", { replace: true });
   }
 

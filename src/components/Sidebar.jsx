@@ -56,8 +56,8 @@ export function Sidebar({
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     if (isMobile) {
       onClose?.();
     }

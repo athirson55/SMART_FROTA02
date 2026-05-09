@@ -8,71 +8,25 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import { api } from "../services/api.js";
-
-const TOKEN_KEY = "smart-frota-token";
-const USER_KEY = "smart-frota-user";
-
-function readStoredUser() {
-  try {
-    const raw =
-      localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveSession(token, user, manterConectado) {
-  const storage = manterConectado ? localStorage : sessionStorage;
-  const existingUser = readStoredUser();
-  const mergedUser =
-    existingUser &&
-    (existingUser.id === user?.id || existingUser.email === user?.email)
-      ? {
-          ...existingUser,
-          ...user,
-          avatarFoto:
-            user?.avatarFoto !== undefined
-              ? user.avatarFoto
-              : existingUser.avatarFoto,
-        }
-      : user;
-  storage.setItem(TOKEN_KEY, token);
-  storage.setItem(USER_KEY, JSON.stringify(mergedUser));
-
-  // Sempre salvar também no outro storage para persistência de foto
-  const otherStorage = manterConectado ? sessionStorage : localStorage;
-  otherStorage.setItem(USER_KEY, JSON.stringify(mergedUser));
-}
-
-function clearSession() {
-  [localStorage, sessionStorage].forEach((s) => {
-    s.removeItem(TOKEN_KEY);
-    s.removeItem(USER_KEY);
-  });
-}
-
-function getStoredUser() {
-  return readStoredUser();
-}
-
-function getStoredToken() {
-  return (
-    localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || null
-  );
-}
+import {
+  clearSession,
+  readStoredTokens,
+  readStoredUser,
+  saveSession,
+  updateStoredUser,
+} from "../services/sessionStorage.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => getStoredUser());
+  const [user, setUser] = useState(() => readStoredUser());
   const [loading, setLoading] = useState(false);
 
   // Valida o token ao montar — busca /auth/eu
   useEffect(() => {
-    const token = getStoredToken();
+    const { token } = readStoredTokens();
     if (!token) return;
-    const storedUser = getStoredUser();
+    const storedUser = readStoredUser();
     api
       .get("/auth/eu")
       .then((res) => {
@@ -99,12 +53,22 @@ export function AuthProvider({ children }) {
           senha,
           manterConectado,
         });
-        const { token, usuario } = res.data.data;
-        saveSession(token, usuario, manterConectado);
+        const { token, refreshToken, usuario } = res.data.data;
+        const mergedUser = readStoredUser()
+          ? {
+              ...readStoredUser(),
+              ...usuario,
+              avatarFoto:
+                usuario?.avatarFoto !== undefined
+                  ? usuario.avatarFoto
+                  : readStoredUser()?.avatarFoto,
+            }
+          : usuario;
+        saveSession(token, refreshToken, mergedUser, manterConectado);
         flushSync(() => {
-          setUser(usuario);
+          setUser(mergedUser);
         });
-        return usuario;
+        return mergedUser;
       } finally {
         setLoading(false);
       }
@@ -116,45 +80,36 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const res = await api.post("/auth/registrar", { nome, email, senha });
-      const { token, usuario } = res.data.data;
-      saveSession(token, usuario, true);
+      const { token, refreshToken, usuario } = res.data.data;
+      saveSession(token, refreshToken, usuario, true);
       flushSync(() => {
         setUser(usuario);
       });
       return usuario;
-    } catch (err) {
-      // Fallback para ambientes sem backend: quando não há resposta do servidor
-      // (ex.: conexão recusada), criar uma sessão local falsa para permitir
-      // que os fluxos essenciais continuem (útil para testes e apresentações).
-      if (!err?.response) {
-        const fakeUser = { id: `local-${Date.now()}`, nome, email };
-        const fakeToken = `local-token-${Date.now()}`;
-        saveSession(fakeToken, fakeUser, true);
-        flushSync(() => setUser(fakeUser));
-        return fakeUser;
-      }
-      // Para erros válidos do servidor, propagar para o chamador tratar.
-      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const logout = useCallback(() => {
-    clearSession();
-    setUser(null);
+  const logout = useCallback(async () => {
+    const { refreshToken } = readStoredTokens();
+    try {
+      if (refreshToken) {
+        await api.post("/auth/logout", { refreshToken });
+      }
+    } catch {
+      // Ignora falha no logout remoto e encerra a sessão localmente.
+    } finally {
+      clearSession();
+      setUser(null);
+    }
   }, []);
 
   const updateUser = useCallback((updated) => {
     flushSync(() => {
       setUser(updated);
     });
-    const token = getStoredToken();
-    if (token) {
-      // Salvar em ambos os storages para garantir persistência
-      localStorage.setItem(USER_KEY, JSON.stringify(updated));
-      sessionStorage.setItem(USER_KEY, JSON.stringify(updated));
-    }
+    updateStoredUser(updated);
   }, []);
 
   const value = useMemo(
