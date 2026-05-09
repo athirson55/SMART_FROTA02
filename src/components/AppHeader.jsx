@@ -42,7 +42,7 @@ function ProfileMenu({ navigate, onClose, onLogout }) {
         type="button"
         className="fg-header-dropdown-item"
         onClick={() => {
-          navigate("/motoristas");
+          navigate("/configuracoes");
           onClose();
         }}
       >

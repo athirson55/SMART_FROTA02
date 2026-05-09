@@ -35,7 +35,6 @@ export function AuthProvider({ children }) {
         const userWithPhoto = storedUser?.avatarFoto
           ? { ...serverUser, avatarFoto: storedUser.avatarFoto }
           : serverUser;
-        console.log("Auth/eu response:", serverUser);
         setUser(userWithPhoto);
       })
       .catch(() => {

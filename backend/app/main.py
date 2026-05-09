@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,11 +13,26 @@ from app.routes import alerts, appointments, auth, drivers, health, maintenances
 
 app_settings = get_settings()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if app_settings.auto_create_tables:
+        create_tables()
+    if app_settings.seed_on_startup:
+        db = SessionLocal()
+        try:
+            seed_database(db)
+        finally:
+            db.close()
+    yield
+
+
 app = FastAPI(
     title=app_settings.app_name,
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -32,18 +49,6 @@ app.add_middleware(
     limit=int(app_settings.rate_limit_auth.split("/")[0]),
     window_seconds=60,
 )
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    if app_settings.auto_create_tables:
-        create_tables()
-    if app_settings.seed_on_startup:
-        db = SessionLocal()
-        try:
-            seed_database(db)
-        finally:
-            db.close()
 
 
 @app.exception_handler(HTTPException)

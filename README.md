@@ -1,40 +1,63 @@
-# Smart Frota PI
+# Smart Frota
 
-Tela de login implementada em React + Vite com base no design do Figma.
+Sistema web completo de gestão de frotas para o mercado brasileiro.
 
 ## Stack
 
-- React
-- Vite
-- React Router DOM
-- Axios
-- CSS puro
+**Frontend:** React 18 · Vite · React Router DOM · Axios · CSS puro  
+**Backend:** FastAPI · SQLAlchemy 2 · PostgreSQL · Alembic · JWT
 
-## Frontend
+## Módulos
+
+- Veículos — cadastro, status, quilometragem, CRLV e seguro
+- Motoristas — CNH, categoria, vencimento e disponibilidade
+- Manutenções — preventiva/corretiva, custo, mecânico e oficina
+- Agendamentos — ordens de serviço com data, hora e local
+- Alertas — prioridade CRITICO / MEDIO / BAIXO com notificações
+- Relatórios — dashboard e exportação de dados
+- Autenticação — JWT com refresh token e "manter conectado"
+
+## Executando o frontend
 
 ```bash
 npm install
 npm run dev
 ```
 
-## Backend novo
+Crie um `.env` na raiz com:
 
-O backend FastAPI novo fica em [backend/](backend). Ele usa PostgreSQL, SQLAlchemy, Alembic e JWT.
+```env
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+## Executando o backend
 
 ```bash
 cd backend
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/Mac
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Integração com backend
+Crie um `backend/.env` com:
 
-Defina a variável de ambiente `VITE_API_BASE_URL` em um arquivo `.env` para apontar para a API.
+```env
+DATABASE_URL=postgresql+psycopg2://smartfrota:smartfrota@localhost:5432/smartfrota
+SECRET_KEY=troque-esta-chave-em-producao
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=7
+CORS_ORIGINS=http://localhost:5173,http://localhost:4173
+AUTO_CREATE_TABLES=True
+SEED_ON_STARTUP=True
+RATE_LIMIT_AUTH=10/minute
+```
 
-Exemplo:
+A documentação interativa da API fica disponível em `http://localhost:8000/docs`.
+
+## Testes E2E
 
 ```bash
-VITE_API_BASE_URL=http://localhost:8000
+npx playwright test
 ```
