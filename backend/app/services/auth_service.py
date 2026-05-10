@@ -164,19 +164,17 @@ def change_password(db: Session, user: User, senha_atual: str, nova_senha: str) 
     db.commit()
 
 
-def create_password_reset_token(db: Session, email: str) -> tuple[str, bool]:
-    """Generate a one-time reset token and optionally send it via e-mail.
+def create_password_reset_token(db: Session, email: str) -> None:
+    """Generate a one-time reset token and send it via e-mail.
 
-    Returns (raw_token, email_sent). The raw token is only exposed in the API
-    response when SMTP is not configured (dev mode). When SMTP is configured the
-    token must arrive via e-mail and is NOT returned.
+    Silently returns when the e-mail is not found to prevent user enumeration.
     """
     from app.core.email import send_password_reset_email
     from app.models.password_reset import PasswordResetToken
 
     user = get_user_by_email(db, email)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="E-mail não encontrado no sistema")
+        return  # Silently succeed — never reveal whether the e-mail exists
 
     # Invalidate any existing pending tokens for this user
     pending = db.scalars(
@@ -197,8 +195,7 @@ def create_password_reset_token(db: Session, email: str) -> tuple[str, bool]:
     db.commit()
 
     reset_url = f"{settings.frontend_url}/#/redefinir-senha?token={raw_token}"
-    email_sent = send_password_reset_email(user.email, reset_url, settings)
-    return raw_token, email_sent
+    send_password_reset_email(user.email, reset_url, settings)
 
 
 def consume_password_reset_token(db: Session, raw_token: str, nova_senha: str) -> None:

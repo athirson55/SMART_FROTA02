@@ -13,10 +13,17 @@ import { NovoAgendamentoModal } from "../components/NovoAgendamentoModal";
 const filterItems = [
   { key: "todos", label: "Todos" },
   { key: "agendado", label: "Agendado" },
-  { key: "proximo", label: "Proximo" },
+  { key: "proximo", label: "Próximo" },
   { key: "atrasado", label: "Atrasado" },
-  { key: "concluido", label: "Concluido" },
+  { key: "concluido", label: "Concluído" },
 ];
+
+const statusLabels = {
+  agendado: "Agendado",
+  proximo: "Próximo",
+  atrasado: "Atrasado",
+  concluido: "Concluído",
+};
 
 function classify(item) {
   if (item.done) {
@@ -79,7 +86,7 @@ function normalizeAppointment(item) {
     time: item.time || item.hora || "08:00",
     km: Number(item.km ?? 0),
     owner: item.owner || item.responsavel || item.local || "",
-    done: Boolean(item.done ?? item.concluido ?? false),
+    done: Boolean(item.done ?? item.concluido ?? (item.status || "").toUpperCase() === "CONCLUIDA" ?? false),
   };
 }
 
@@ -95,7 +102,7 @@ function AppointmentCard({ item, actions }) {
           <small>{item.plate}</small>
         </div>
         <span className={`fg-appt-badge ${statusClass(item.status)}`}>
-          {item.status}
+          {statusLabels[item.status] ?? item.status}
         </span>
       </div>
 
@@ -200,6 +207,7 @@ export function AppointmentsPage() {
   }
 
   function handleDeleteAppointment(apptId) {
+    if (!window.confirm("Remover este agendamento? Esta ação não pode ser desfeita.")) return;
     deleteAppointment(apptId)
       .then(() => {
         showSuccess("Agendamento removido com sucesso");
@@ -319,8 +327,8 @@ export function AppointmentsPage() {
       <div className="fg-home-content fg-appt-content">
         <section className="fg-appt-page-top">
           <div>
-            <h3>Gestao de Agendamentos</h3>
-            <p>Planeje e acompanhe manutencoes preventivas e corretivas</p>
+            <h3>Gestão de Agendamentos</h3>
+            <p>Planeje e acompanhe manutenções preventivas e corretivas</p>
           </div>
           <button
             type="button"
@@ -348,7 +356,7 @@ export function AppointmentsPage() {
             </span>
             <div>
               <strong>{counters.proximo}</strong>
-              <small>Proximos 7 dias</small>
+              <small>Próximos 7 dias</small>
             </div>
           </article>
 
@@ -370,7 +378,7 @@ export function AppointmentsPage() {
             </span>
             <div>
               <strong>{counters.concluido}</strong>
-              <small>Concluidos</small>
+              <small>Concluídos</small>
             </div>
           </article>
         </section>
@@ -419,15 +427,12 @@ export function AppointmentsPage() {
               </div>
 
               <div className="fg-appt-upcoming">
-                <small>Proximos eventos</small>
+                <small>Próximos eventos</small>
                 {upcoming.map((item) => (
                   <div key={item.id}>
                     <span>{item.type}</span>
                     <em>
-                      {new Date(item.date).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
+                      {item.date ? item.date.slice(8, 10) + "/" + item.date.slice(5, 7) : "—"}
                     </em>
                   </div>
                 ))}
@@ -462,7 +467,7 @@ export function AppointmentsPage() {
                   type="text"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Buscar veiculo, placa, tipo ou responsavel"
+                  placeholder="Buscar veículo, placa, tipo ou responsável"
                 />
               </div>
             </section>
@@ -483,12 +488,12 @@ export function AppointmentsPage() {
                   <table className="fg-appt-table">
                     <thead>
                       <tr>
-                        <th>Veiculo</th>
+                        <th>Veículo</th>
                         <th>Tipo</th>
                         <th>Data</th>
                         <th>Km previsto</th>
                         <th>Status</th>
-                        <th>Responsavel</th>
+                        <th>Responsável</th>
                         <th>Ações</th>
                       </tr>
                     </thead>
@@ -508,15 +513,14 @@ export function AppointmentsPage() {
                           </td>
                           <td>{item.type}</td>
                           <td>
-                            {new Date(item.date).toLocaleDateString("pt-BR")} •{" "}
-                            {item.time}
+                            {formatDate(item.date)} • {item.time}
                           </td>
                           <td>{item.km.toLocaleString("pt-BR")} km</td>
                           <td>
                             <span
                               className={`fg-appt-badge ${statusClass(item.status)}`}
                             >
-                              {item.status}
+                              {statusLabels[item.status] ?? item.status}
                             </span>
                           </td>
                           <td>{item.owner}</td>

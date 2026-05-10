@@ -13,12 +13,16 @@ import { NovoVeiculoModal } from "../components/NovoVeiculoModal";
 
 function normalizeVehicle(vehicle) {
   const motorist = vehicle.motorista || vehicle.driverRelation || {};
-  const pendencies = vehicle.pendencies || vehicle.pendencias || [];
+  const rawPendencies = vehicle.pendencies || vehicle.pendencias || [];
+  const pendencies = rawPendencies.map((p) => ({
+    ...p,
+    tone: String(p.tone || "amber").toLowerCase(),
+  }));
   const rawStatus = vehicle.status || "ATIVO";
   const statusLabel =
     rawStatus === "MANUTENCAO" ? "Em manutenção" :
     rawStatus === "EM_ROTA" ? "Em rota" :
-    rawStatus === "INATIVO" ? "Inativo" : "Ativo";
+    rawStatus === "INATIVO" ? "Reserva" : "Ativo";
 
   return {
     ...vehicle,
@@ -143,6 +147,7 @@ export function VehiclesPage() {
   }
 
   function handleDeleteVehicle(vehicleId, vehiclePlate) {
+    if (!window.confirm(`Remover o veículo ${vehiclePlate}? Esta ação não pode ser desfeita.`)) return;
     deleteVehicle(vehicleId)
       .then(() => {
         showSuccess(`Veículo ${vehiclePlate} removido com sucesso`);
@@ -353,26 +358,30 @@ export function VehiclesPage() {
                   >
                     {vehicle.status}
                   </span>
-                  <div style={{ display: "flex", gap: 8, marginLeft: 12 }}>
+                  <div className="fg-vehicle-card-actions">
                     <button
                       type="button"
+                      className="fg-vehicle-action-btn"
                       aria-label={`Editar ${vehicle.plate}`}
                       onClick={(event) => {
                         event.stopPropagation();
                         abrirEdicao(vehicle);
                       }}
                     >
-                      ✎
+                      <AppIcon type="wrench" />
                     </button>
                     <button
                       type="button"
+                      className="fg-vehicle-action-btn is-danger"
                       aria-label={`Remover ${vehicle.plate}`}
                       onClick={(event) => {
                         event.stopPropagation();
                         handleDeleteVehicle(vehicle.id, vehicle.plate);
                       }}
                     >
-                      ×
+                      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -424,7 +433,7 @@ export function VehiclesPage() {
               title="Nenhum veículo cadastrado"
               description="Ajuste os filtros ou adicione um novo veículo para começar."
               actionLabel="Adicionar veículo"
-              onAction={() => navigate("/agendamentos")}
+              onAction={abrirModal}
             />
           ) : null}
         </section>

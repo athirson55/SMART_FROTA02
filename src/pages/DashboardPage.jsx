@@ -177,7 +177,10 @@ export function DashboardPage() {
         if (!active) return;
         setDashboardKpis(res.data?.data ?? null);
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error("Erro ao carregar relatório do dashboard:", err);
+        if (active) setDashboardKpis(null);
+      });
 
     return () => {
       active = false;
@@ -439,12 +442,9 @@ export function DashboardPage() {
           <div className="fg-dashboard-quick-actions">
             <AppButton
               className="fg-home-filter-btn"
-              onClick={() => {
-                showSuccess("Pendências visíveis marcadas para resolução");
-                navigate("/alertas");
-              }}
+              onClick={() => navigate("/alertas")}
             >
-              Resolver pendência
+              Ver alertas
             </AppButton>
             <AppButton
               className="fg-home-filter-btn"

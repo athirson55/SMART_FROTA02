@@ -31,19 +31,19 @@ def read_vehicles(
     current_user=Depends(get_current_user),
 ):
     items, total, meta = list_vehicles(db, search=search, status_value=status, page=page, limit=limit)
-    return success_response("Veículos listados com sucesso", [serialize_vehicle(item) for item in items], meta={**meta, "total": total})
+    return success_response("Veículos listados com sucesso", [serialize_vehicle(item, include_pendencias=True) for item in items], meta={**meta, "total": total})
 
 
 @router.get("/{vehicle_id}")
 def read_vehicle(vehicle_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     vehicle = get_vehicle(db, vehicle_id)
-    return success_response("Veículo encontrado", serialize_vehicle(vehicle))
+    return success_response("Veículo encontrado", serialize_vehicle(vehicle, include_pendencias=True))
 
 
 @router.post("")
 def create_vehicle_route(payload: VehicleCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     vehicle = create_vehicle(db, payload.model_dump())
-    return success_response("Veículo criado com sucesso", serialize_vehicle(vehicle), status_code=201)
+    return success_response("Veículo criado com sucesso", serialize_vehicle(vehicle, include_pendencias=True), status_code=201)
 
 
 @router.put("/{vehicle_id}")
@@ -51,7 +51,7 @@ def create_vehicle_route(payload: VehicleCreate, db: Session = Depends(get_db), 
 def update_vehicle_route(vehicle_id: str, payload: VehicleUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     vehicle = get_vehicle(db, vehicle_id)
     vehicle = update_vehicle(db, vehicle, payload.model_dump(exclude_unset=True))
-    return success_response("Veículo atualizado com sucesso", serialize_vehicle(vehicle))
+    return success_response("Veículo atualizado com sucesso", serialize_vehicle(vehicle, include_pendencias=True))
 
 
 @router.delete("/{vehicle_id}")

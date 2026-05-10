@@ -14,10 +14,12 @@ const typeLabels = {
   corretiva: "Corretiva",
   preditiva: "Preditiva",
   revisao: "Revisão",
+  emergencial: "Emergencial",
 };
 
 const statusLabels = {
   pendente: "Pendente",
+  agendada: "Agendada",
   em_andamento: "Em andamento",
   concluida: "Concluída",
 };
@@ -26,6 +28,7 @@ const priorityLabels = {
   alta: "Alta",
   media: "Média",
   baixa: "Baixa",
+  critica: "Crítica",
 };
 
 function normalizeMaintenance(item) {
@@ -54,13 +57,13 @@ function normalizeMaintenance(item) {
   return {
     ...item,
     vehicle: vehicleLabel,
-    type: item.type || item.tipo || "preventiva",
+    type: (item.type || item.tipo || "preventiva").toLowerCase(),
     description: item.description || item.descricao || "",
     date: normalizedDate,
     km: Number(item.km ?? item.quilometragem ?? 0),
     cost: Number(item.cost ?? item.custo ?? 0),
-    priority: item.priority || item.prioridade || "media",
-    status: item.status || "pendente",
+    priority: (item.priority || item.prioridade || "media").toLowerCase(),
+    status: (item.status || "pendente").toLowerCase(),
   };
 }
 
@@ -188,6 +191,7 @@ export function MaintenancesPage() {
   }
 
   function handleDeleteMaintenance(maintId) {
+    if (!window.confirm("Remover este registro de manutenção? Esta ação não pode ser desfeita.")) return;
     deleteMaintenance(maintId)
       .then(() => {
         showSuccess("Manutenção removida com sucesso");
@@ -275,6 +279,7 @@ export function MaintenancesPage() {
   );
 
   function formatDate(dateText) {
+    if (!dateText) return "—";
     const [year, month, day] = dateText.split("-");
     return `${day}/${month}/${year}`;
   }

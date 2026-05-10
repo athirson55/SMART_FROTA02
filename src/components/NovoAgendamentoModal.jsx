@@ -52,7 +52,9 @@ function buildForm(item) {
     km: item.km ? String(item.km) : "",
     local: item.local || item.office || "",
     responsavel: item.responsavel || item.owner || "",
-    status: item.status || "AGENDADO",
+    status: STATUS_OPTS.some((o) => o.value === (item.status || "").toUpperCase())
+      ? (item.status || "AGENDADO").toUpperCase()
+      : "AGENDADO",
     observacoes: item.observacoes || "",
   };
 }

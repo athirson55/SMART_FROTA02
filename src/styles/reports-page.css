@@ -346,4 +346,92 @@
   .fg-reports-page tbody td:nth-child(5)::before { content: "Última manutenção"; }
   .fg-reports-page tbody td:nth-child(6)::before { content: "Alertas"; }
   .fg-reports-page tbody td:nth-child(7)::before { content: "Performance"; }
+  :root.dark .fg-reports-page tbody tr {
+    border-color: #2d3748;
+    background: #1a1f2e;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
 }
+
+/* ══════════════════════════════════════════
+   DARK MODE
+══════════════════════════════════════════ */
+:root.dark .fg-reports-page {
+  --r-blue:        #6b9ef8;
+  --r-blue-light:  #1e2d4a;
+  --r-blue-mid:    #2d4a7a;
+  --r-bg:          #0e1117;
+  --r-surface:     #1a1f2e;
+  --r-border:      #2d3748;
+  --r-text:        #e2e8f0;
+  --r-muted:       #64748b;
+  --r-green:       #4ade80;
+  --r-green-bg:    #14291e;
+  --r-red:         #f87171;
+  --r-red-bg:      #2d1212;
+  --r-amber:       #fbbf24;
+  --r-amber-bg:    #2d2010;
+  --r-purple:      #a78bfa;
+  --r-purple-bg:   #1e1635;
+  --r-shadow:      0 1px 4px rgba(0,0,0,0.4);
+  --r-shadow-md:   0 4px 16px rgba(0,0,0,0.5);
+  background: var(--r-bg);
+  color: var(--r-text);
+}
+
+:root.dark .fg-reports-page .filter-bar {
+  background: var(--r-surface);
+  border-color: var(--r-border);
+}
+:root.dark .fg-reports-page .filter-select {
+  background: #1e2535;
+  border-color: var(--r-border);
+  color: var(--r-text);
+  color-scheme: dark;
+}
+:root.dark .fg-reports-page .reset-btn {
+  background: var(--r-surface);
+  border-color: var(--r-border);
+  color: var(--r-muted);
+}
+:root.dark .fg-reports-page .reset-btn:hover {
+  background: #252d3d;
+  color: var(--r-text);
+}
+:root.dark .fg-reports-page .kpi-card {
+  background: var(--r-surface);
+  border-color: var(--r-border);
+}
+:root.dark .fg-reports-page .kpi-label { color: var(--r-muted); }
+:root.dark .fg-reports-page .chart-card,
+:root.dark .fg-reports-page .table-card {
+  background: var(--r-surface);
+  border-color: var(--r-border);
+}
+:root.dark .fg-reports-page .chart-header,
+:root.dark .fg-reports-page .table-card-header {
+  border-color: var(--r-border);
+}
+:root.dark .fg-reports-page .chart-title { color: var(--r-text); }
+:root.dark .fg-reports-page thead tr { background: var(--r-bg); border-color: var(--r-border); }
+:root.dark .fg-reports-page th { color: var(--r-muted); }
+:root.dark .fg-reports-page td { color: var(--r-text); }
+:root.dark .fg-reports-page tbody tr { border-color: #2d3748; }
+:root.dark .fg-reports-page tbody tr:hover { background: #252d3d; }
+:root.dark .fg-reports-page .vc-av { background: var(--r-blue-light); }
+:root.dark .fg-reports-page .vc-av svg { fill: var(--r-blue); }
+:root.dark .fg-reports-page .bar-bg { background: #252d3d; border-color: var(--r-border); }
+:root.dark .fg-reports-page .perf-bar-bg { background: #252d3d; border-color: var(--r-border); }
+:root.dark .fg-reports-page .donut-item { border-color: #252d3d; }
+:root.dark .fg-reports-page .center-big { fill: var(--r-text); }
+:root.dark .fg-reports-page .page-title { color: var(--r-text); }
+:root.dark .fg-reports-page .bar-switch button {
+  background: var(--r-surface);
+  border-color: var(--r-border);
+  color: var(--r-muted);
+}
+:root.dark .fg-reports-page .bar-switch button:hover {
+  background: #252d3d;
+  color: var(--r-text);
+}
+:root.dark .fg-reports-page .axis-label { fill: var(--r-muted); }

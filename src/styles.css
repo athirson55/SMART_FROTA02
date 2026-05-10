@@ -391,6 +391,63 @@ body {
   text-align: center;
 }
 
+/* ── Password strength ── */
+.reg-pwd-strength {
+  margin-top: 8px;
+}
+.reg-pwd-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.reg-pwd-bar-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+.reg-pwd-strength-label {
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  margin-left: 6px;
+  min-width: 80px;
+  text-align: right;
+}
+.reg-pwd-rules {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 12px;
+}
+.reg-pwd-rule {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+.reg-pwd-rule.is-ok {
+  color: #16a34a;
+}
+.reg-pwd-rule-icon {
+  font-size: 12px;
+  font-weight: 700;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.reg-pwd-rule.is-ok .reg-pwd-rule-icon {
+  color: #16a34a;
+}
+.reg-pwd-rule.is-fail .reg-pwd-rule-icon {
+  color: #94a3b8;
+}
+
 /* ── Responsive ── */
 @media (max-width: 1024px) {
   .login-screen,

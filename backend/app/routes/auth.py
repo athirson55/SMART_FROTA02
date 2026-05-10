@@ -74,14 +74,8 @@ def change_password_route(payload: AuthPasswordChangeRequest, db: Session = Depe
 
 @router.post("/recuperar-senha")
 def recover_password(payload: AuthPasswordRecoveryRequest, db: Session = Depends(get_db)):
-    raw_token, email_sent = create_password_reset_token(db, payload.email.strip().lower())
-    response_data: dict = {"sent": email_sent}
-    if not email_sent:
-        from app.core.config import get_settings
-        s = get_settings()
-        response_data["devResetUrl"] = f"{s.frontend_url}/#/redefinir-senha?token={raw_token}"
-        response_data["hint"] = "SMTP não configurado — use devResetUrl para testar o fluxo"
-    return success_response("Se o e-mail existir, enviaremos instruções de recuperação", response_data)
+    create_password_reset_token(db, payload.email.strip().lower())
+    return success_response("Se o e-mail existir, enviaremos instruções de recuperação", {"sent": True})
 
 
 @router.post("/redefinir-senha")

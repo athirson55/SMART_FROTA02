@@ -78,6 +78,14 @@ function getDisplayName(user) {
   return user?.nome || user?.name || "Usuário";
 }
 
+function getRoleLabel(user) {
+  const role = user?.role || "";
+  if (role === "ADMIN") return "Administrador";
+  if (role === "GESTOR") return "Gestor";
+  if (role === "MOTORISTA") return "Motorista";
+  return "Gestor de Frota";
+}
+
 function getUserInitials(user) {
   const displayName = getDisplayName(user);
   return displayName
@@ -123,6 +131,10 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
   const mobileMode = isMobile || isMobileViewport;
 
   const [notifications, setNotifications] = useState([]);
+  const [readIds, setReadIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("sf-read-notifs") || "[]")); }
+    catch { return new Set(); }
+  });
 
   useEffect(() => {
     let active = true;
@@ -196,7 +208,16 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
       .slice(0, 6);
   }, [searchPool, searchQuery]);
 
-  const notificationItems = useMemo(() => notifications, [notifications]);
+  const unreadNotifications = useMemo(
+    () => notifications.filter((n) => !readIds.has(n.id)),
+    [notifications, readIds],
+  );
+
+  function markAllRead() {
+    const newIds = new Set([...readIds, ...notifications.map((n) => n.id)]);
+    setReadIds(newIds);
+    localStorage.setItem("sf-read-notifs", JSON.stringify([...newIds]));
+  }
 
   const closeHeaderMenus = useCallback(() => {
     setIsNotificationOpen(false);
@@ -376,56 +397,72 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
             title="Notificações"
             aria-expanded={isNotificationOpen}
             onClick={() => {
-              setIsNotificationOpen((value) => !value);
+              const opening = !isNotificationOpen;
+              setIsNotificationOpen(opening);
               setIsProfileOpen(false);
+              if (opening) markAllRead();
             }}
           >
             <AppIcon type="bell" />
-            {notificationItems.length > 0 ? (
+            {unreadNotifications.length > 0 ? (
               <span className="fg-home-icon-badge">
-                {notificationItems.length}
+                {unreadNotifications.length}
               </span>
             ) : null}
           </button>
 
           {isNotificationOpen ? (
             <div className="fg-header-dropdown fg-header-notification-dropdown">
-              {notificationItems.length > 0 ? (
-                notificationItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="fg-header-dropdown-item fg-notif-wrapper"
-                  >
-                    <button
-                      type="button"
-                      className="fg-notif-content"
-                      onClick={() => {
-                        navigate(item.route);
-                        setIsNotificationOpen(false);
-                      }}
-                    >
-                      <strong>{item.label}</strong>
-                      <span>{item.detail}</span>
-                      <small>{item.vehicleId}</small>
-                    </button>
-                    <button
-                      type="button"
-                      className="fg-notif-dismiss"
-                      aria-label="Descartar notificação"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setNotifications((prev) =>
-                          prev.filter((n) => n.id !== item.id),
-                        );
-                      }}
-                    >
-                      ×
-                    </button>
+              {notifications.length > 0 ? (
+                <>
+                  <div className="fg-notif-header">
+                    <strong>Notificações</strong>
+                    {notifications.length > 0 && (
+                      <button
+                        type="button"
+                        className="fg-notif-mark-all"
+                        onClick={markAllRead}
+                      >
+                        Marcar todas como lidas
+                      </button>
+                    )}
                   </div>
-                ))
+                  {notifications.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`fg-header-dropdown-item fg-notif-wrapper ${readIds.has(item.id) ? "is-read" : "is-unread"}`}
+                    >
+                      <button
+                        type="button"
+                        className="fg-notif-content"
+                        onClick={() => {
+                          navigate(item.route);
+                          setIsNotificationOpen(false);
+                        }}
+                      >
+                        <strong>{item.label}</strong>
+                        <span>{item.detail}</span>
+                        {item.vehicleId ? <small>{item.vehicleId}</small> : null}
+                      </button>
+                      <button
+                        type="button"
+                        className="fg-notif-dismiss"
+                        aria-label="Descartar notificação"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNotifications((prev) =>
+                            prev.filter((n) => n.id !== item.id),
+                          );
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </>
               ) : (
                 <div className="fg-header-dropdown-empty">
-                  Sem alertas recentes.
+                  <span>Nenhuma notificação recente</span>
                 </div>
               )}
             </div>
@@ -448,7 +485,7 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
               <ProfileAvatar user={user} />
               <div className="fg-home-user-info">
                 <strong>{getDisplayName(user)}</strong>
-                <p>{user?.role ?? "Perfil"}</p>
+                <p>{getRoleLabel(user)}</p>
               </div>
             </div>
           </button>

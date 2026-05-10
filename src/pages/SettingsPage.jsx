@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { AppIcon } from "../components/AppIcon";
 import { updateMeRequest, changePasswordRequest } from "../services/auth.js";
 import { getSettings, updateSettings } from "../services/settings.js";
+import { useTheme } from "../context/ThemeContext";
+import { usePreferences } from "../context/PreferencesContext";
 import "../styles/dashboard.css";
 import "../styles/settings-page.css";
 
@@ -64,6 +67,21 @@ const DENSITY_OPTIONS = [
   },
 ];
 
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function applyAccentColor(color) {
+  const root = document.documentElement;
+  root.style.setProperty("--sf-primary", color);
+  root.style.setProperty("--sf-text-active", color);
+  root.style.setProperty("--sf-primary-light", hexToRgba(color, 0.12));
+  root.style.setProperty("--sf-bg-active", hexToRgba(color, 0.1));
+}
+
 function strengthFromPassword(password) {
   if (!password) {
     return { score: 0, label: "Digite uma senha" };
@@ -123,8 +141,31 @@ function ToggleRow({ title, desc, checked, onToggle }) {
   );
 }
 
+async function compressImage(file, maxDimension = 300, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const { naturalWidth: w, naturalHeight: h } = img;
+      const ratio = Math.min(maxDimension / w, maxDimension / h, 1);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(w * ratio);
+      canvas.height = Math.round(h * ratio);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Falha ao processar imagem")); };
+    img.src = url;
+  });
+}
+
 export function SettingsPage() {
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
+  const { prefs, updatePrefs } = usePreferences();
   const fileInputRef = useRef(null);
   const iniciais = user?.nome
     ? user.nome
@@ -147,9 +188,11 @@ export function SettingsPage() {
   const [smsAlerts, setSmsAlerts] = useState(false);
   const [dailySummary, setDailySummary] = useState(false);
 
-  const [themeMode, setThemeMode] = useState("claro");
+  const [themeMode, setThemeMode] = useState(theme);
   const [densityMode, setDensityMode] = useState("padrao");
-  const [accentColor, setAccentColor] = useState("#2563EB");
+  const [accentColor, setAccentColor] = useState(() => {
+    return localStorage.getItem("smart-frota-accent") || "#2f67d8";
+  });
 
   const [oilInterval, setOilInterval] = useState(10000);
   const [brakeInterval, setBrakeInterval] = useState(20000);
@@ -165,7 +208,9 @@ export function SettingsPage() {
 
   const [settingsId, setSettingsId] = useState(null);
   const [companyName, setCompanyName] = useState("Smart Frota");
-  const [timezone, setTimezone] = useState("America/Sao_Paulo");
+  const [timezone, setTimezone] = useState(prefs.timezone || "America/Sao_Paulo");
+  const [currency, setCurrency] = useState(prefs.currency || "BRL");
+  const [dateFormat, setDateFormat] = useState(prefs.dateFormat || "DD/MM/AAAA");
   const [lowDaysThreshold, setLowDaysThreshold] = useState(15);
   const [lowKmThreshold, setLowKmThreshold] = useState(500);
 
@@ -180,7 +225,7 @@ export function SettingsPage() {
   );
 
   useEffect(() => {
-    document.documentElement.style.setProperty("--blue", accentColor);
+    applyAccentColor(accentColor);
   }, [accentColor]);
 
   useEffect(() => {
@@ -241,12 +286,14 @@ export function SettingsPage() {
   }
 
   async function handleSaveIdioma() {
+    updatePrefs({ timezone, currency, dateFormat });
     await saveSettings({ timezone });
-    showToast("Configurações de idioma salvas!");
+    showToast("Configurações de idioma e região salvas!");
   }
 
   async function handleSaveFlota() {
-    await saveSettings({ lowDaysThreshold: advanceDays, lowKmThreshold });
+    const rawJson = JSON.stringify({ oilInterval, brakeInterval, reviewInterval });
+    await saveSettings({ lowDaysThreshold: advanceDays, lowKmThreshold, rawJson });
     showToast("Configurações da frota salvas!");
   }
 
@@ -317,6 +364,8 @@ export function SettingsPage() {
 
   function handleToggleColor(color) {
     setAccentColor(color);
+    localStorage.setItem("smart-frota-accent", color);
+    applyAccentColor(color);
     showToast("Cor de destaque atualizada!");
   }
 
@@ -341,14 +390,14 @@ export function SettingsPage() {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      showToast("Imagem muito grande. Use um arquivo com até 2 MB");
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Imagem muito grande. Use um arquivo com até 5 MB");
       event.target.value = "";
       return;
     }
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      const dataUrl = await compressImage(file, 256, 0.85);
       setAvatarFoto(dataUrl);
       const res = await updateMeRequest({ avatarFoto: dataUrl });
       const updated = res.data?.data ?? res.data;
@@ -772,11 +821,11 @@ export function SettingsPage() {
                       <button
                         type="button"
                         className="fg-settings-primary-btn"
-                        onClick={() =>
-                          showToast("Configuração de 2FA iniciada!")
-                        }
+                        disabled
+                        title="Em breve"
+                        style={{ opacity: 0.5, cursor: "not-allowed" }}
                       >
-                        Ativar 2FA
+                        Em breve
                       </button>
                     </div>
                   </div>
@@ -990,7 +1039,11 @@ export function SettingsPage() {
                           key={option.key}
                           type="button"
                           className={`fg-settings-option-card ${themeMode === option.key ? "selected" : ""}`}
-                          onClick={() => setThemeMode(option.key)}
+                          onClick={() => {
+                            setThemeMode(option.key);
+                            setTheme(option.key);
+                            showToast(option.key === "escuro" ? "Modo escuro ativado!" : "Modo claro ativado!");
+                          }}
                         >
                           <div className="fg-settings-option-title">
                             {option.title}
@@ -1080,8 +1133,8 @@ export function SettingsPage() {
                     <div className="fg-settings-form-grid">
                       <label className="fg-settings-field">
                         <span>Idioma</span>
-                        <select defaultValue="Português (Brasil)" disabled>
-                          <option>Português (Brasil)</option>
+                        <select defaultValue="pt-BR" disabled>
+                          <option value="pt-BR">Português (Brasil)</option>
                         </select>
                       </label>
 
@@ -1100,15 +1153,25 @@ export function SettingsPage() {
 
                       <label className="fg-settings-field">
                         <span>Formato de data</span>
-                        <select defaultValue="DD/MM/AAAA" disabled>
-                          <option>DD/MM/AAAA</option>
+                        <select
+                          value={dateFormat}
+                          onChange={(e) => setDateFormat(e.target.value)}
+                        >
+                          <option value="DD/MM/AAAA">DD/MM/AAAA (padrão BR)</option>
+                          <option value="MM/DD/AAAA">MM/DD/AAAA (EUA)</option>
+                          <option value="AAAA-MM-DD">AAAA-MM-DD (ISO 8601)</option>
                         </select>
                       </label>
 
                       <label className="fg-settings-field">
                         <span>Moeda</span>
-                        <select defaultValue="Real Brasileiro (BRL)" disabled>
-                          <option>Real Brasileiro (BRL)</option>
+                        <select
+                          value={currency}
+                          onChange={(e) => setCurrency(e.target.value)}
+                        >
+                          <option value="BRL">Real Brasileiro (BRL)</option>
+                          <option value="USD">Dólar Americano (USD)</option>
+                          <option value="EUR">Euro (EUR)</option>
                         </select>
                       </label>
                     </div>
@@ -1120,7 +1183,7 @@ export function SettingsPage() {
                       className="fg-settings-primary-btn"
                       onClick={handleSaveIdioma}
                     >
-                      Salvar
+                      Salvar preferências
                     </button>
                   </div>
                 </article>
@@ -1436,7 +1499,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       className="fg-settings-ghost-btn"
-                      onClick={() => { window.location.href = "/relatorios"; showToast("Acesse a página de Relatórios para exportar CSV"); }}
+                      onClick={() => { navigate("/relatorios"); showToast("Acesse a página de Relatórios para exportar CSV"); }}
                     >
                       Ir para Relatórios
                     </button>

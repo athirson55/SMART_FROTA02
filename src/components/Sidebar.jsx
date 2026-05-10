@@ -71,12 +71,17 @@ export function Sidebar({
       onMouseLeave={onMouseLeave}
     >
       <div className="fg-home-sidebar-top">
-        <div className="fg-home-brand-link" aria-hidden="true">
-          <span className="fg-home-brand-icon" aria-hidden="true">
+        <button
+          type="button"
+          className="fg-home-brand-link"
+          onClick={() => navigate("/home")}
+          aria-label="Ir para Home"
+        >
+          <span className="fg-home-brand-icon">
             <AppIcon type="truck" />
           </span>
           <span className="fg-home-brand-label">Smart Frota</span>
-        </div>
+        </button>
 
         <nav className="fg-home-nav">
           {sidebarItems.map((item) => (

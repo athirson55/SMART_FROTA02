@@ -28,7 +28,7 @@ def serialize_driver(driver: Driver) -> dict:
     }
 
 
-def serialize_vehicle(vehicle: Vehicle, include_driver: bool = True) -> dict:
+def serialize_vehicle(vehicle: Vehicle, include_driver: bool = True, include_pendencias: bool = False) -> dict:
     payload = {
         "id": vehicle.id,
         "modelo": vehicle.modelo,
@@ -52,6 +52,8 @@ def serialize_vehicle(vehicle: Vehicle, include_driver: bool = True) -> dict:
     if include_driver:
         payload["motorista"] = serialize_driver(vehicle.motorista) if vehicle.motorista else None
         payload["driver"] = vehicle.motorista.nome if vehicle.motorista else None
+    if include_pendencias:
+        payload["pendencias"] = [serialize_pendencia(p) for p in vehicle.pendencias if p.resolved_at is None]
     return payload
 
 
@@ -163,7 +165,7 @@ def delete_driver(db: Session, driver: Driver) -> None:
 
 
 def list_vehicles(db: Session, search: str | None = None, status_value: str | None = None, page: int = 1, limit: int = 25):
-    query = select(Vehicle).options(joinedload(Vehicle.motorista))
+    query = select(Vehicle).options(joinedload(Vehicle.motorista), joinedload(Vehicle.pendencias))
     if search:
         term = f"%{search.strip()}%"
         query = query.where(
@@ -181,7 +183,7 @@ def list_vehicles(db: Session, search: str | None = None, status_value: str | No
 
 
 def get_vehicle(db: Session, vehicle_id: str) -> Vehicle:
-    vehicle = db.scalar(select(Vehicle).options(joinedload(Vehicle.motorista)).where(Vehicle.id == vehicle_id))
+    vehicle = db.scalar(select(Vehicle).options(joinedload(Vehicle.motorista), joinedload(Vehicle.pendencias)).where(Vehicle.id == vehicle_id))
     if not vehicle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Veículo não encontrado")
     return vehicle

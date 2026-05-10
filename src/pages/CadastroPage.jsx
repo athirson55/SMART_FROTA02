@@ -1,10 +1,31 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import truckImage from "../assets/caminhao.avif";
 
 const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+
+const PASSWORD_RULES = [
+  { key: "length", label: "Mínimo 8 caracteres", test: (s) => s.length >= 8 },
+  { key: "upper", label: "Letra maiúscula (A-Z)", test: (s) => /[A-Z]/.test(s) },
+  { key: "lower", label: "Letra minúscula (a-z)", test: (s) => /[a-z]/.test(s) },
+  { key: "number", label: "Número (0-9)", test: (s) => /[0-9]/.test(s) },
+  {
+    key: "special",
+    label: "Caractere especial (!@#$...)",
+    test: (s) => /[^A-Za-z0-9]/.test(s),
+  },
+];
+
+const STRENGTH_LABELS = ["", "Muito fraca", "Fraca", "Razoável", "Forte", "Muito forte"];
+const STRENGTH_COLORS = ["", "#ef4444", "#f97316", "#eab308", "#22c55e", "#16a34a"];
+
+function getPasswordStrength(password) {
+  if (!password) return { score: 0, passed: [] };
+  const passed = PASSWORD_RULES.filter((r) => r.test(password)).map((r) => r.key);
+  return { score: passed.length, passed };
+}
 
 export function CadastroPage() {
   const navigate = useNavigate();
@@ -16,10 +37,16 @@ export function CadastroPage() {
   const [confirmar, setConfirmar] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [touched, setTouched] = useState(false);
+
+  const { score, passed } = useMemo(() => getPasswordStrength(senha), [senha]);
+  const strengthLabel = STRENGTH_LABELS[score] ?? "";
+  const strengthColor = STRENGTH_COLORS[score] ?? "";
 
   async function handleRegister(e) {
     e.preventDefault();
     setFeedback("");
+    setTouched(true);
     const t = {
       nome: nome.trim(),
       email: email.trim(),
@@ -33,15 +60,20 @@ export function CadastroPage() {
       );
     if (!isEmail(t.email))
       return (setFeedback("E-mail inválido."), showError("E-mail inválido"));
+    if (t.senha.length < 8)
+      return (
+        setFeedback("Senha deve ter ao menos 8 caracteres."),
+        showError("Senha muito curta")
+      );
+    if (score < 3)
+      return (
+        setFeedback("Senha muito fraca. Adicione mais requisitos."),
+        showError("Senha fraca")
+      );
     if (t.senha !== t.confirmar)
       return (
         setFeedback("Senhas não coincidem."),
         showError("Senhas não coincidem")
-      );
-    if (t.senha.length < 6)
-      return (
-        setFeedback("Senha deve ter ao menos 6 caracteres."),
-        showError("Senha curta")
       );
 
     setIsLoading(true);
@@ -98,17 +130,63 @@ export function CadastroPage() {
               required
             />
           </label>
-          <label className="register-field-group" htmlFor="senha">
-            <span className="register-field-group__label">SENHA</span>
+          <div className="register-field-group">
+            <label className="register-field-group__label" htmlFor="senha">
+              SENHA
+            </label>
             <input
               id="senha"
               type="password"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Mínimo 8 caracteres"
               value={senha}
-              onChange={(e) => setSenha(e.target.value)}
+              onChange={(e) => {
+                setSenha(e.target.value);
+                setTouched(true);
+              }}
               required
             />
-          </label>
+
+            {(touched && senha.length > 0) || senha.length > 0 ? (
+              <div className="reg-pwd-strength">
+                <div className="reg-pwd-bar-row">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className="reg-pwd-bar-seg"
+                      style={{
+                        background: i <= score ? strengthColor : "#e2e8f0",
+                        transition: "background 0.2s ease",
+                      }}
+                    />
+                  ))}
+                  {score > 0 && (
+                    <span
+                      className="reg-pwd-strength-label"
+                      style={{ color: strengthColor }}
+                    >
+                      {strengthLabel}
+                    </span>
+                  )}
+                </div>
+                <ul className="reg-pwd-rules">
+                  {PASSWORD_RULES.map((rule) => {
+                    const ok = passed.includes(rule.key);
+                    return (
+                      <li
+                        key={rule.key}
+                        className={`reg-pwd-rule ${ok ? "is-ok" : "is-fail"}`}
+                      >
+                        <span className="reg-pwd-rule-icon">
+                          {ok ? "✓" : "○"}
+                        </span>
+                        {rule.label}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ) : null}
+          </div>
           <label className="register-field-group" htmlFor="confirmar">
             <span className="register-field-group__label">CONFIRMAR SENHA</span>
             <input

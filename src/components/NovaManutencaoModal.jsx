@@ -7,6 +7,7 @@ const TIPO_OPTS = [
   { value: "PREVENTIVA", label: "Preventiva" },
   { value: "CORRETIVA", label: "Corretiva" },
   { value: "PREDITIVA", label: "Preditiva" },
+  { value: "REVISAO", label: "Revisão" },
   { value: "EMERGENCIAL", label: "Emergencial" },
 ];
 
@@ -47,7 +48,7 @@ function buildForm(item) {
 
   return {
     veiculoId: item.veiculoId || item.vehicleId || "",
-    tipo: item.tipo || item.type || "PREVENTIVA",
+    tipo: (item.tipo || item.type || "PREVENTIVA").toUpperCase(),
     descricao: item.descricao || item.description || "",
     data:
       item.data || item.date
@@ -55,8 +56,8 @@ function buildForm(item) {
         : today(),
     km: item.km ? String(item.km) : "",
     custo: item.custo ? String(item.custo) : "",
-    status: item.status || "PENDENTE",
-    prioridade: item.prioridade || item.priority || "MEDIA",
+    status: (item.status || "PENDENTE").toUpperCase(),
+    prioridade: (item.prioridade || item.priority || "MEDIA").toUpperCase(),
     mecanico: item.mecanico || "",
     oficina: item.oficina || "",
     observacoes: item.observacoes || "",

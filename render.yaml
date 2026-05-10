@@ -25,7 +25,7 @@ services:
       - key: AUTO_CREATE_TABLES
         value: "true"
       - key: SEED_ON_STARTUP
-        value: "true"
+        value: "false"
       - key: RATE_LIMIT_AUTH
         value: "10/minute"
 

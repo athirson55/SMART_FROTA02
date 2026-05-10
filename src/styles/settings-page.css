@@ -995,3 +995,45 @@
     justify-content: center;
   }
 }
+
+/* ══════════════════════════════════════════
+   DARK MODE — Override local CSS variables
+══════════════════════════════════════════ */
+:root.dark .fg-settings-page {
+  --s-blue: #6b9ef8;
+  --s-blue-light: rgba(107, 158, 248, 0.12);
+  --s-blue-mid: rgba(107, 158, 248, 0.25);
+  --s-bg: #0e1117;
+  --s-surface: #1a1f2e;
+  --s-border: #2d3748;
+  --s-text: #e2e8f0;
+  --s-muted: #64748b;
+  --s-green: #4ade80;
+  --s-green-bg: rgba(74, 222, 128, 0.12);
+  --s-red: #f87171;
+  --s-red-bg: rgba(248, 113, 113, 0.12);
+  --s-amber: #fbbf24;
+  --s-amber-bg: rgba(251, 191, 36, 0.12);
+  --s-purple: #a78bfa;
+  --s-purple-bg: rgba(167, 139, 250, 0.12);
+  --s-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  --s-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+:root.dark .fg-settings-page input,
+:root.dark .fg-settings-page select,
+:root.dark .fg-settings-page textarea {
+  background: #1e2535 !important;
+  border-color: #374151 !important;
+  color: #e2e8f0 !important;
+}
+:root.dark .fg-settings-page input::placeholder,
+:root.dark .fg-settings-page textarea::placeholder {
+  color: #4b5563 !important;
+}
+:root.dark .fg-settings-field span {
+  color: #94a3b8;
+}
+:root.dark .fg-settings-danger-item.is-warning {
+  background: rgba(220, 38, 38, 0.08) !important;
+  border-color: rgba(220, 38, 38, 0.25) !important;
+}

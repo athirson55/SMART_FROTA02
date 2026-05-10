@@ -14,6 +14,10 @@ from app.routes import alerts, appointments, auth, drivers, health, maintenances
 
 app_settings = get_settings()
 logger = logging.getLogger(__name__)
+
+if app_settings.environment == "production" and app_settings.secret_key == "change-me":
+    raise RuntimeError("SECRET_KEY deve ser configurada em produção. Defina a variável de ambiente SECRET_KEY.")
+
 auth_limit = int(app_settings.rate_limit_auth.split("/")[0])
 if app_settings.environment == "development":
     auth_limit = max(auth_limit, 1000)

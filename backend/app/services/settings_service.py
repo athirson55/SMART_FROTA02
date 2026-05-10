@@ -44,6 +44,6 @@ def update_settings(settings: SystemSetting, data: dict) -> SystemSetting:
     }
     for key, value in data.items():
         field = mapping.get(key)
-        if field and value is not None:
+        if field is not None:
             setattr(settings, field, value)
     return settings

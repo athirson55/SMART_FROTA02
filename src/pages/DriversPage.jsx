@@ -116,6 +116,7 @@ export function DriversPage() {
   }
 
   function handleDeleteDriver(driverId, driverName) {
+    if (!window.confirm(`Remover o motorista ${driverName}? Esta ação não pode ser desfeita.`)) return;
     deleteDriver(driverId)
       .then(() => {
         showSuccess(`${driverName} removido com sucesso`);
