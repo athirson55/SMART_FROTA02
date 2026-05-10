@@ -341,28 +341,35 @@ export function SettingsPage() {
       return;
     }
 
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Imagem muito grande. Use um arquivo com até 2 MB");
+      event.target.value = "";
+      return;
+    }
+
     try {
       const dataUrl = await readFileAsDataUrl(file);
       setAvatarFoto(dataUrl);
-      updateUser({
-        ...(user || {}),
-        avatarFoto: dataUrl,
-      });
+      const res = await updateMeRequest({ avatarFoto: dataUrl });
+      const updated = res.data?.data ?? res.data;
+      updateUser({ ...(user || {}), ...updated, avatarFoto: dataUrl });
       showToast("Foto atualizada com sucesso!");
     } catch {
-      showToast("Não foi possível carregar a foto");
+      showToast("Não foi possível salvar a foto. Tente novamente.");
     } finally {
       event.target.value = "";
     }
   }
 
-  function handleRemoveAvatar() {
+  async function handleRemoveAvatar() {
     setAvatarFoto("");
-    updateUser({
-      ...(user || {}),
-      avatarFoto: null,
-    });
-    showToast("Foto removida");
+    try {
+      await updateMeRequest({ avatarFoto: null });
+      updateUser({ ...(user || {}), avatarFoto: null });
+      showToast("Foto removida");
+    } catch {
+      showToast("Erro ao remover foto. Tente novamente.");
+    }
   }
 
   return (

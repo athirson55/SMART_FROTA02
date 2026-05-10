@@ -21,7 +21,7 @@ pip install -r requirements.txt
 Copie o arquivo `.env` e ajuste a URL do PostgreSQL.
 
 ```env
-DATABASE_URL=postgresql+psycopg2://usuario:senha@localhost:5432/smartfrota
+DATABASE_URL=postgresql+psycopg://usuario:senha@localhost:5432/smartfrota
 SECRET_KEY=uma-chave-forte
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```

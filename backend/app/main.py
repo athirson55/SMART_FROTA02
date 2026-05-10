@@ -14,6 +14,9 @@ from app.routes import alerts, appointments, auth, drivers, health, maintenances
 
 app_settings = get_settings()
 logger = logging.getLogger(__name__)
+auth_limit = int(app_settings.rate_limit_auth.split("/")[0])
+if app_settings.environment == "development":
+    auth_limit = max(auth_limit, 1000)
 
 
 @asynccontextmanager
@@ -54,7 +57,7 @@ app.add_middleware(
 app.add_middleware(
     SimpleRateLimitMiddleware,
     paths={"/auth/login", "/auth/registrar", "/auth/refresh", "/auth/recuperar-senha"},
-    limit=int(app_settings.rate_limit_auth.split("/")[0]),
+    limit=auth_limit,
     window_seconds=60,
 )
 

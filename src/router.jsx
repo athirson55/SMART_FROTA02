@@ -2,6 +2,7 @@ import { Navigate, createHashRouter } from "react-router-dom";
 import { LoginPage } from "./pages/LoginPage";
 import { CadastroPage } from "./pages/CadastroPage";
 import { RecoverPasswordPage } from "./pages/RecoverPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { HomePage } from "./pages/HomePage";
 import { PendingDetailPage } from "./pages/PendingDetailPage";
@@ -83,6 +84,14 @@ const routes = [
     element: (
       <GuestOnlyRoute>
         <RecoverPasswordPage />
+      </GuestOnlyRoute>
+    ),
+  },
+  {
+    path: "/redefinir-senha",
+    element: (
+      <GuestOnlyRoute>
+        <ResetPasswordPage />
       </GuestOnlyRoute>
     ),
   },

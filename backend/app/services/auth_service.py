@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -146,6 +148,8 @@ def refresh_session(db: Session, refresh_token_raw: str) -> dict:
 def update_me(db: Session, user: User, data: dict) -> User:
     if data.get("nome"):
         user.nome = data["nome"].strip()
+    if "avatarFoto" in data:
+        user.avatar_foto = data["avatarFoto"]  # None clears it
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -157,6 +161,68 @@ def change_password(db: Session, user: User, senha_atual: str, nova_senha: str) 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta")
     user.senha_hash = hash_password(nova_senha)
     db.add(user)
+    db.commit()
+
+
+def create_password_reset_token(db: Session, email: str) -> tuple[str, bool]:
+    """Generate a one-time reset token and optionally send it via e-mail.
+
+    Returns (raw_token, email_sent). The raw token is only exposed in the API
+    response when SMTP is not configured (dev mode). When SMTP is configured the
+    token must arrive via e-mail and is NOT returned.
+    """
+    from app.core.email import send_password_reset_email
+    from app.models.password_reset import PasswordResetToken
+
+    user = get_user_by_email(db, email)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="E-mail não encontrado no sistema")
+
+    # Invalidate any existing pending tokens for this user
+    pending = db.scalars(
+        select(PasswordResetToken).where(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used_at.is_(None),
+        )
+    ).all()
+    for tok in pending:
+        tok.used_at = datetime.now(timezone.utc)
+    db.flush()
+
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_expire_minutes)
+
+    db.add(PasswordResetToken(user_id=user.id, token_hash=token_hash, expires_at=expires_at))
+    db.commit()
+
+    reset_url = f"{settings.frontend_url}/#/redefinir-senha?token={raw_token}"
+    email_sent = send_password_reset_email(user.email, reset_url, settings)
+    return raw_token, email_sent
+
+
+def consume_password_reset_token(db: Session, raw_token: str, nova_senha: str) -> None:
+    """Validate the token, update the password, and mark the token as used."""
+    from app.models.password_reset import PasswordResetToken
+
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    token_row = db.scalar(select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash))
+
+    if not token_row:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token inválido ou expirado")
+    if token_row.used_at is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token já utilizado")
+    if token_row.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token expirado. Solicite um novo link.")
+
+    user = get_user_by_id(db, token_row.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Usuário inválido")
+
+    user.senha_hash = hash_password(nova_senha)
+    token_row.used_at = datetime.now(timezone.utc)
+    db.add(user)
+    db.add(token_row)
     db.commit()
 
 

@@ -22,20 +22,16 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => readStoredUser());
   const [loading, setLoading] = useState(false);
 
-  // Valida o token ao montar — busca /auth/eu
+  // Valida o token ao montar — busca /auth/eu (server é fonte da verdade)
   useEffect(() => {
     const { token } = readStoredTokens();
     if (!token) return;
-    const storedUser = readStoredUser();
     api
       .get("/auth/eu")
       .then((res) => {
         const serverUser = res.data.data ?? res.data;
-        // Manter foto local se existir
-        const userWithPhoto = storedUser?.avatarFoto
-          ? { ...serverUser, avatarFoto: storedUser.avatarFoto }
-          : serverUser;
-        setUser(userWithPhoto);
+        setUser(serverUser);
+        updateStoredUser(serverUser);
       })
       .catch(() => {
         clearSession();
@@ -53,21 +49,11 @@ export function AuthProvider({ children }) {
           manterConectado,
         });
         const { token, refreshToken, usuario } = res.data.data;
-        const mergedUser = readStoredUser()
-          ? {
-              ...readStoredUser(),
-              ...usuario,
-              avatarFoto:
-                usuario?.avatarFoto !== undefined
-                  ? usuario.avatarFoto
-                  : readStoredUser()?.avatarFoto,
-            }
-          : usuario;
-        saveSession(token, refreshToken, mergedUser, manterConectado);
+        saveSession(token, refreshToken, usuario, manterConectado);
         flushSync(() => {
-          setUser(mergedUser);
+          setUser(usuario);
         });
-        return mergedUser;
+        return usuario;
       } finally {
         setLoading(false);
       }

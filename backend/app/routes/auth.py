@@ -8,6 +8,7 @@ from app.schemas.auth import (
     AuthLoginRequest,
     AuthPasswordChangeRequest,
     AuthPasswordRecoveryRequest,
+    AuthPasswordResetRequest,
     AuthProfileUpdateRequest,
     AuthRefreshRequest,
     AuthRegisterRequest,
@@ -15,6 +16,8 @@ from app.schemas.auth import (
 from app.services.auth_service import (
     authenticate_user,
     change_password,
+    consume_password_reset_token,
+    create_password_reset_token,
     issue_token_pair,
     refresh_session,
     register_user,
@@ -71,13 +74,17 @@ def change_password_route(payload: AuthPasswordChangeRequest, db: Session = Depe
 
 @router.post("/recuperar-senha")
 def recover_password(payload: AuthPasswordRecoveryRequest, db: Session = Depends(get_db)):
-    from sqlalchemy import select
-    from app.models.user import User as UserModel
-    email = payload.email.strip().lower()
-    user = db.scalar(select(UserModel).where(UserModel.email == email))
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="E-mail não encontrado no sistema")
-    return success_response(
-        "Se o e-mail existir, enviaremos instruções de recuperação",
-        {"sent": True, "hint": "Funcionalidade de envio de e-mail pendente de configuração SMTP"},
-    )
+    raw_token, email_sent = create_password_reset_token(db, payload.email.strip().lower())
+    response_data: dict = {"sent": email_sent}
+    if not email_sent:
+        from app.core.config import get_settings
+        s = get_settings()
+        response_data["devResetUrl"] = f"{s.frontend_url}/#/redefinir-senha?token={raw_token}"
+        response_data["hint"] = "SMTP não configurado — use devResetUrl para testar o fluxo"
+    return success_response("Se o e-mail existir, enviaremos instruções de recuperação", response_data)
+
+
+@router.post("/redefinir-senha")
+def reset_password(payload: AuthPasswordResetRequest, db: Session = Depends(get_db)):
+    consume_password_reset_token(db, payload.token, payload.novaSenha)
+    return success_response("Senha redefinida com sucesso", {"reset": True})

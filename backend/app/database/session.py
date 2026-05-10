@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import get_settings
+import app.models  # noqa: F401 - garante mapeamentos carregados no metadata
 from app.models.base import Base
 
 settings = get_settings()

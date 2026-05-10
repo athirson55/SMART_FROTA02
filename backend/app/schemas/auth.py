@@ -38,8 +38,14 @@ class AuthUserResponse(BaseModel):
 
 class AuthProfileUpdateRequest(BaseModel):
     nome: str | None = Field(None, min_length=2, max_length=120)
+    avatarFoto: str | None = None
 
 
 class AuthPasswordChangeRequest(BaseModel):
     senhaAtual: str = Field(min_length=1, max_length=128)
+    novaSenha: str = Field(min_length=8, max_length=128)
+
+
+class AuthPasswordResetRequest(BaseModel):
+    token: str
     novaSenha: str = Field(min_length=8, max_length=128)
