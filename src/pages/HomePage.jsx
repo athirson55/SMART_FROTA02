@@ -357,12 +357,15 @@ export function HomePage() {
                 </span>
                 <h4>Documentos prestes a vencer</h4>
               </div>
-              <small>7 veículos</small>
+              {documentRows.length > 0 && (
+                <small>{documentRows.length} alerta{documentRows.length !== 1 ? "s" : ""}</small>
+              )}
             </div>
             <div className="fg-home-list-body">
-              {documentRows.map((row) => (
-                <Row key={row[0]} row={row} />
-              ))}
+              {documentRows.length > 0
+                ? documentRows.map((row) => <Row key={row[0]} row={row} />)
+                : <p className="fg-home-empty-row">Nenhum alerta no momento</p>
+              }
             </div>
           </article>
 
@@ -385,12 +388,15 @@ export function HomePage() {
                 </span>
                 <h4>Manutenções próximas</h4>
               </div>
-              <small className="is-red-pill">4 veículos</small>
+              {maintenanceRows.length > 0 && (
+                <small className="is-red-pill">{maintenanceRows.length} veículo{maintenanceRows.length !== 1 ? "s" : ""}</small>
+              )}
             </div>
             <div className="fg-home-list-body">
-              {maintenanceRows.map((row) => (
-                <Row key={row[0]} row={row} />
-              ))}
+              {maintenanceRows.length > 0
+                ? maintenanceRows.map((row) => <Row key={row[0]} row={row} />)
+                : <p className="fg-home-empty-row">Sem pendências de manutenção</p>
+              }
             </div>
           </article>
         </section>

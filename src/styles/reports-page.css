@@ -44,6 +44,9 @@
 .fg-reports-page .page-title { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
 .fg-reports-page .page-sub   { font-size: 12px; color: var(--r-muted); }
 
+.fg-reports-page .export-actions {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
 .fg-reports-page .export-btn {
   height: 36px; padding: 0 18px; background: var(--r-blue); border: none; border-radius: 8px;
   color: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
@@ -52,6 +55,12 @@
 }
 .fg-reports-page .export-btn:hover  { filter: brightness(.96); box-shadow: 0 4px 14px rgba(37,99,235,.35); }
 .fg-reports-page .export-btn:active { transform: translateY(1px); }
+.fg-reports-page .export-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.fg-reports-page .export-btn-excel {
+  background: var(--r-green);
+  box-shadow: 0 2px 8px rgba(22,163,74,.25);
+}
+.fg-reports-page .export-btn-excel:hover { box-shadow: 0 4px 14px rgba(22,163,74,.35); }
 
 /* ── Filter bar ── */
 .fg-reports-page .filter-bar {
@@ -262,6 +271,25 @@
 .fg-reports-page .perf-bar-bg   { flex: 1; height: 6px; background: var(--r-bg); border-radius: 3px; border: 1px solid var(--r-border); overflow: hidden; }
 .fg-reports-page .perf-bar-fill { height: 100%; border-radius: 3px; background: var(--r-blue); }
 
+/* ── Loading state ── */
+.reports-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 64px 24px; color: var(--r-muted); font-size: 13px;
+}
+.reports-loading-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid var(--r-border); border-top-color: var(--r-blue);
+  animation: rp-spin .7s linear infinite;
+}
+@keyframes rp-spin { to { transform: rotate(360deg); } }
+
+/* ── Empty state ── */
+.fg-reports-page .chart-empty {
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px 16px; color: var(--r-muted); font-size: 12px;
+  width: 100%; text-align: center;
+}
+
 /* ── Toast ── */
 .reports-toast {
   position: fixed; right: 24px; bottom: 24px; z-index: 400;
@@ -313,8 +341,9 @@
   }
   .fg-reports-page tbody td:nth-child(1)::before { content: "Veículo"; }
   .fg-reports-page tbody td:nth-child(2)::before { content: "Manutenções"; }
-  .fg-reports-page tbody td:nth-child(3)::before { content: "Custo"; }
-  .fg-reports-page tbody td:nth-child(4)::before { content: "Última"; }
-  .fg-reports-page tbody td:nth-child(5)::before { content: "Alertas"; }
-  .fg-reports-page tbody td:nth-child(6)::before { content: "Performance"; }
+  .fg-reports-page tbody td:nth-child(3)::before { content: "Custo acumulado"; }
+  .fg-reports-page tbody td:nth-child(4)::before { content: "Custo médio"; }
+  .fg-reports-page tbody td:nth-child(5)::before { content: "Última manutenção"; }
+  .fg-reports-page tbody td:nth-child(6)::before { content: "Alertas"; }
+  .fg-reports-page tbody td:nth-child(7)::before { content: "Performance"; }
 }

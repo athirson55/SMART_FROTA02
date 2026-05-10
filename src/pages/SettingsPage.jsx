@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { useAuth } from "../context/AuthContext";
 import { AppIcon } from "../components/AppIcon";
+import { updateMeRequest, changePasswordRequest } from "../services/auth.js";
+import { getSettings, updateSettings } from "../services/settings.js";
 import "../styles/dashboard.css";
 import "../styles/settings-page.css";
 
@@ -37,21 +39,6 @@ const NAV_SECTIONS = [
   },
 ];
 
-const SESSION_ITEMS = [
-  {
-    title: "Chrome · Windows 11",
-    meta: "São Paulo, BR · Agora · IP 189.50.x.x",
-    current: true,
-  },
-  {
-    title: "Safari · iPhone 15",
-    meta: "São Paulo, BR · Há 2 horas · IP 189.50.x.x",
-  },
-  {
-    title: "Chrome · macOS",
-    meta: "Rio de Janeiro, BR · Ontem às 14:30 · IP 201.80.x.x",
-  },
-];
 
 const COLOR_OPTIONS = [
   "#2563EB",
@@ -176,6 +163,12 @@ export function SettingsPage() {
   const [autoAlert, setAutoAlert] = useState(true);
   const [blockOverdue, setBlockOverdue] = useState(false);
 
+  const [settingsId, setSettingsId] = useState(null);
+  const [companyName, setCompanyName] = useState("Smart Frota");
+  const [timezone, setTimezone] = useState("America/Sao_Paulo");
+  const [lowDaysThreshold, setLowDaysThreshold] = useState(15);
+  const [lowKmThreshold, setLowKmThreshold] = useState(500);
+
   const [passwordCurrent, setPasswordCurrent] = useState("");
   const [passwordNext, setPasswordNext] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -195,12 +188,72 @@ export function SettingsPage() {
   }, [user?.avatarFoto]);
 
   useEffect(() => {
+    getSettings()
+      .then((res) => {
+        const s = res.data?.data ?? res.data;
+        if (!s) return;
+        setSettingsId(s.id ?? null);
+        setCompanyName(s.companyName || "Smart Frota");
+        setTimezone(s.timezone || "America/Sao_Paulo");
+        setLowDaysThreshold(s.lowDaysThreshold ?? 15);
+        setLowKmThreshold(s.lowKmThreshold ?? 500);
+        if (s.emailNotifications !== undefined) setDocumentAlerts(s.emailNotifications);
+        if (s.rawJson) {
+          try {
+            const prefs = JSON.parse(s.rawJson);
+            if (prefs.maintenanceAlerts !== undefined) setMaintenanceAlerts(prefs.maintenanceAlerts);
+            if (prefs.criticalAlerts !== undefined) setCriticalAlerts(prefs.criticalAlerts);
+            if (prefs.weeklyReport !== undefined) setWeeklyReport(prefs.weeklyReport);
+            if (prefs.newRequests !== undefined) setNewRequests(prefs.newRequests);
+            if (prefs.smsAlerts !== undefined) setSmsAlerts(prefs.smsAlerts);
+            if (prefs.dailySummary !== undefined) setDailySummary(prefs.dailySummary);
+            if (prefs.theme) setThemeMode(prefs.theme);
+          } catch { /* ignore parse errors */ }
+        }
+      })
+      .catch(() => {});
     return () => {
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
       }
     };
   }, []);
+
+  async function saveSettings(patch) {
+    try {
+      await updateSettings(patch);
+    } catch {
+      showToast("Erro ao salvar no servidor");
+    }
+  }
+
+  async function handleSaveNotifications() {
+    const rawJson = JSON.stringify({
+      maintenanceAlerts,
+      criticalAlerts,
+      weeklyReport,
+      newRequests,
+      smsAlerts,
+      dailySummary,
+    });
+    await saveSettings({ emailNotifications: documentAlerts, rawJson });
+    showToast("Preferências de notificação salvas!");
+  }
+
+  async function handleSaveIdioma() {
+    await saveSettings({ timezone });
+    showToast("Configurações de idioma salvas!");
+  }
+
+  async function handleSaveFlota() {
+    await saveSettings({ lowDaysThreshold: advanceDays, lowKmThreshold });
+    showToast("Configurações da frota salvas!");
+  }
+
+  async function handleSaveEmpresa() {
+    await saveSettings({ companyName });
+    showToast("Dados da empresa salvos!");
+  }
 
   function showToast(message) {
     setToastMessage(message);
@@ -210,7 +263,7 @@ export function SettingsPage() {
     toastTimerRef.current = window.setTimeout(() => setToastMessage(""), 3200);
   }
 
-  function handleSaveProfile(event) {
+  async function handleSaveProfile(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const name = form.elements.namedItem("profileName")?.value?.trim();
@@ -220,10 +273,17 @@ export function SettingsPage() {
       return;
     }
 
-    showToast("Perfil salvo com sucesso!");
+    try {
+      const res = await updateMeRequest({ nome: name });
+      const updated = res.data?.data ?? res.data;
+      updateUser({ ...(user || {}), ...updated });
+      showToast("Perfil salvo com sucesso!");
+    } catch {
+      showToast("Erro ao salvar perfil. Tente novamente.");
+    }
   }
 
-  function handleChangePassword(event) {
+  async function handleChangePassword(event) {
     event.preventDefault();
 
     if (!passwordCurrent || !passwordNext || !passwordConfirm) {
@@ -242,11 +302,17 @@ export function SettingsPage() {
       return;
     }
 
-    setPasswordHint("✓ Senhas coincidem");
-    setPasswordCurrent("");
-    setPasswordNext("");
-    setPasswordConfirm("");
-    showToast("Senha alterada com sucesso!");
+    try {
+      await changePasswordRequest({ senhaAtual: passwordCurrent, novaSenha: passwordNext });
+      setPasswordHint("✓ Senha alterada");
+      setPasswordCurrent("");
+      setPasswordNext("");
+      setPasswordConfirm("");
+      showToast("Senha alterada com sucesso!");
+    } catch (err) {
+      const msg = err?.response?.data?.message ?? "Erro ao alterar senha";
+      showToast(msg);
+    }
   }
 
   function handleToggleColor(color) {
@@ -478,48 +544,19 @@ export function SettingsPage() {
                         <span>Cargo / Função</span>
                         <input
                           type="text"
-                          defaultValue={
-                            user?.role === "ADMIN"
-                              ? "Administrador"
-                              : "Gestor de Frota"
-                          }
+                          value={user?.role === "ADMIN" ? "Administrador" : "Gestor de Frota"}
+                          readOnly
+                          disabled
                         />
                       </label>
-
-                      <label className="fg-settings-field">
-                        <span>Email *</span>
-                        <input
-                          type="email"
-                          defaultValue="harsh.vani@smartfrota.com"
-                        />
-                      </label>
-
-                      <label className="fg-settings-field">
-                        <span>Telefone</span>
-                        <input type="tel" defaultValue="(11) 99999-0000" />
-                      </label>
-
-                      <label className="fg-settings-field">
-                        <span>CPF</span>
-                        <input
-                          className="is-mono"
-                          type="text"
-                          defaultValue="123.456.789-00"
-                        />
-                      </label>
-
-                      <label className="fg-settings-field">
-                        <span>Data de nascimento</span>
-                        <input type="date" defaultValue="1988-05-15" />
-                      </label>
-
-                      <div className="fg-settings-form-divider">Endereço</div>
 
                       <label className="fg-settings-field full">
-                        <span>Endereço</span>
+                        <span>Email</span>
                         <input
-                          type="text"
-                          defaultValue="Rua das Flores, 123 — São Paulo, SP"
+                          type="email"
+                          value={user?.email || ""}
+                          readOnly
+                          disabled
                         />
                       </label>
                     </div>
@@ -559,28 +596,13 @@ export function SettingsPage() {
 
                   <div className="fg-settings-card-body">
                     <div className="fg-settings-form-grid">
-                      <label className="fg-settings-field">
+                      <label className="fg-settings-field full">
                         <span>Nome da empresa</span>
-                        <input type="text" defaultValue="Smart Frota Ltda." />
-                      </label>
-
-                      <label className="fg-settings-field">
-                        <span>CNPJ</span>
                         <input
-                          className="is-mono"
                           type="text"
-                          defaultValue="12.345.678/0001-90"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
                         />
-                      </label>
-
-                      <label className="fg-settings-field">
-                        <span>Telefone comercial</span>
-                        <input type="tel" defaultValue="(11) 3333-0000" />
-                      </label>
-
-                      <label className="fg-settings-field">
-                        <span>Website</span>
-                        <input type="url" defaultValue="smartfrota.com.br" />
                       </label>
                     </div>
                   </div>
@@ -589,7 +611,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       className="fg-settings-primary-btn"
-                      onClick={() => showToast("Dados da empresa salvos!")}
+                      onClick={handleSaveEmpresa}
                     >
                       Salvar dados
                     </button>
@@ -776,66 +798,33 @@ export function SettingsPage() {
                         Dispositivos conectados
                       </div>
                       <div className="fg-settings-card-sub">
-                        3 sessões ativas
+                        1 sessão ativa
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      className="fg-settings-danger-btn"
-                      style={{ marginLeft: "auto" }}
-                      onClick={() =>
-                        showToast("Todas as outras sessões foram encerradas!")
-                      }
-                    >
-                      <LockIcon />
-                      Encerrar outras sessões
-                    </button>
                   </div>
 
                   <div className="fg-settings-card-body">
-                    {SESSION_ITEMS.map((session, index) => (
-                      <div
-                        key={session.title}
-                        className="fg-settings-session-item"
-                      >
-                        <div className="fg-settings-session-icon">
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            {index === 0 ? (
-                              <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
-                            ) : index === 1 ? (
-                              <path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" />
-                            ) : (
-                              <path d="M4 6h18V4H4c-1.1 0-2 .9-2 2v11H0v3h14v-3H4V6zm19 2h-6c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h6c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1zm-1 9h-4v-7h4v7z" />
-                            )}
-                          </svg>
-                        </div>
-                        <div className="fg-settings-session-info">
-                          <div className="fg-settings-session-name">
-                            {session.title}
-                            {session.current ? (
-                              <span
-                                className="fg-settings-badge is-green"
-                                style={{ marginLeft: 6, fontSize: 10 }}
-                              >
-                                Sessão atual
-                              </span>
-                            ) : null}
-                          </div>
-                          <div className="fg-settings-session-meta">
-                            {session.meta}
-                          </div>
-                        </div>
-                        {!session.current ? (
-                          <button
-                            type="button"
-                            className="fg-settings-danger-btn is-sm"
-                            onClick={() => showToast("Sessão encerrada!")}
-                          >
-                            Encerrar
-                          </button>
-                        ) : null}
+                    <div className="fg-settings-session-item">
+                      <div className="fg-settings-session-icon">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z" />
+                        </svg>
                       </div>
-                    ))}
+                      <div className="fg-settings-session-info">
+                        <div className="fg-settings-session-name">
+                          Navegador atual
+                          <span className="fg-settings-badge is-green" style={{ marginLeft: 6, fontSize: 10 }}>
+                            Sessão atual
+                          </span>
+                        </div>
+                        <div className="fg-settings-session-meta">
+                          {user?.email} · Agora
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ padding: "12px 0 4px", fontSize: 12, color: "var(--fg-muted, #7b8ca0)" }}>
+                      O rastreamento de múltiplas sessões estará disponível em breve.
+                    </div>
                   </div>
                 </article>
               </section>
@@ -914,9 +903,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       className="fg-settings-primary-btn"
-                      onClick={() =>
-                        showToast("Preferências de notificação salvas!")
-                      }
+                      onClick={handleSaveNotifications}
                     >
                       Salvar preferências
                     </button>
@@ -1086,35 +1073,35 @@ export function SettingsPage() {
                     <div className="fg-settings-form-grid">
                       <label className="fg-settings-field">
                         <span>Idioma</span>
-                        <select defaultValue="Português (Brasil)">
+                        <select defaultValue="Português (Brasil)" disabled>
                           <option>Português (Brasil)</option>
-                          <option>English (US)</option>
-                          <option>Español</option>
                         </select>
                       </label>
 
                       <label className="fg-settings-field">
                         <span>Fuso horário</span>
-                        <select defaultValue="America/São Paulo (UTC-3)">
-                          <option>America/São Paulo (UTC-3)</option>
-                          <option>America/New_York (UTC-5)</option>
+                        <select
+                          value={timezone}
+                          onChange={(e) => setTimezone(e.target.value)}
+                        >
+                          <option value="America/Sao_Paulo">America/São Paulo (UTC-3)</option>
+                          <option value="America/New_York">America/New_York (UTC-5)</option>
+                          <option value="America/Manaus">America/Manaus (UTC-4)</option>
+                          <option value="America/Belem">America/Belém (UTC-3)</option>
                         </select>
                       </label>
 
                       <label className="fg-settings-field">
                         <span>Formato de data</span>
-                        <select defaultValue="DD/MM/AAAA">
+                        <select defaultValue="DD/MM/AAAA" disabled>
                           <option>DD/MM/AAAA</option>
-                          <option>MM/DD/YYYY</option>
-                          <option>YYYY-MM-DD</option>
                         </select>
                       </label>
 
                       <label className="fg-settings-field">
                         <span>Moeda</span>
-                        <select defaultValue="Real Brasileiro (BRL)">
+                        <select defaultValue="Real Brasileiro (BRL)" disabled>
                           <option>Real Brasileiro (BRL)</option>
-                          <option>US Dollar (USD)</option>
                         </select>
                       </label>
                     </div>
@@ -1124,9 +1111,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       className="fg-settings-primary-btn"
-                      onClick={() =>
-                        showToast("Configurações de idioma salvas!")
-                      }
+                      onClick={handleSaveIdioma}
                     >
                       Salvar
                     </button>
@@ -1251,9 +1236,7 @@ export function SettingsPage() {
                     <button
                       type="button"
                       className="fg-settings-primary-btn"
-                      onClick={() =>
-                        showToast("Intervalos de manutenção salvos!")
-                      }
+                      onClick={handleSaveFlota}
                     >
                       Salvar intervalos
                     </button>
@@ -1388,43 +1371,21 @@ export function SettingsPage() {
 
                   <div className="fg-settings-card-body">
                     <div className="fg-settings-toggles-list">
-                      <ToggleRow
-                        title="🗺 Google Maps — Rastreamento"
-                        desc="Exibir rotas e localização dos veículos em tempo real"
-                        checked={true}
-                        onToggle={() => showToast("Google Maps atualizado!")}
-                      />
-                      <ToggleRow
-                        title="📧 SendGrid — Email"
-                        desc="Envio de alertas e relatórios por email"
-                        checked={true}
-                        onToggle={() => showToast("SendGrid atualizado!")}
-                      />
-                      <ToggleRow
-                        title="💬 WhatsApp Business — SMS"
-                        desc="Notificações via mensagem de texto"
-                        checked={false}
-                        onToggle={() =>
-                          showToast("WhatsApp Business atualizado!")
-                        }
-                      />
-                      <ToggleRow
-                        title="📊 Power BI — Relatórios"
-                        desc="Exportar dados para dashboards avançados"
-                        checked={false}
-                        onToggle={() => showToast("Power BI atualizado!")}
-                      />
+                      {[
+                        { title: "🗺 Google Maps — Rastreamento", desc: "Exibir rotas e localização dos veículos em tempo real" },
+                        { title: "📧 SendGrid — Email", desc: "Envio de alertas e relatórios por email" },
+                        { title: "💬 WhatsApp Business — SMS", desc: "Notificações via mensagem de texto" },
+                        { title: "📊 Power BI — Relatórios", desc: "Exportar dados para dashboards avançados" },
+                      ].map((item) => (
+                        <div key={item.title} className="fg-settings-toggle-row">
+                          <div className="fg-settings-toggle-info">
+                            <div className="fg-settings-toggle-label">{item.title}</div>
+                            <div className="fg-settings-toggle-desc">{item.desc}</div>
+                          </div>
+                          <span className="fg-settings-badge is-amber" style={{ fontSize: 11 }}>Em breve</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-
-                  <div className="fg-settings-card-footer">
-                    <button
-                      type="button"
-                      className="fg-settings-primary-btn"
-                      onClick={() => showToast("Integrações atualizadas!")}
-                    >
-                      Salvar integrações
-                    </button>
                   </div>
                 </article>
               </section>
@@ -1459,23 +1420,18 @@ export function SettingsPage() {
                   <div className="fg-settings-danger-item">
                     <div className="fg-settings-danger-item-info">
                       <div className="fg-settings-danger-item-title">
-                        Exportar todos os dados
+                        Exportar relatório CSV
                       </div>
                       <div className="fg-settings-danger-item-desc">
-                        Baixe uma cópia de todos os dados do sistema em formato
-                        JSON/CSV
+                        Baixe um relatório CSV com os dados de veículos e manutenções
                       </div>
                     </div>
                     <button
                       type="button"
                       className="fg-settings-ghost-btn"
-                      onClick={() =>
-                        showToast(
-                          "Exportação iniciada — você receberá um email em breve.",
-                        )
-                      }
+                      onClick={() => { window.location.href = "/relatorios"; showToast("Acesse a página de Relatórios para exportar CSV"); }}
                     >
-                      Exportar dados
+                      Ir para Relatórios
                     </button>
                   </div>
 
@@ -1485,16 +1441,30 @@ export function SettingsPage() {
                         Redefinir configurações
                       </div>
                       <div className="fg-settings-danger-item-desc">
-                        Restaurar todas as configurações do sistema para os
-                        valores padrão
+                        Restaurar todas as configurações do sistema para os valores padrão
                       </div>
                     </div>
                     <button
                       type="button"
                       className="fg-settings-danger-btn"
-                      onClick={() =>
-                        showToast("Configurações restauradas para o padrão!")
-                      }
+                      onClick={async () => {
+                        if (window.confirm("Restaurar configurações para o padrão?")) {
+                          await saveSettings({
+                            companyName: "Smart Frota",
+                            timezone: "America/Sao_Paulo",
+                            emailNotifications: true,
+                            lowDaysThreshold: 15,
+                            lowKmThreshold: 500,
+                            rawJson: null,
+                          });
+                          setCompanyName("Smart Frota");
+                          setTimezone("America/Sao_Paulo");
+                          setLowDaysThreshold(15);
+                          setAdvanceDays(30);
+                          setDocumentAlerts(true);
+                          showToast("Configurações restauradas para o padrão!");
+                        }
+                      }}
                     >
                       <LockIcon />
                       Redefinir

@@ -6,17 +6,21 @@ from app.core.responses import success_response
 from app.database.session import get_db
 from app.schemas.auth import (
     AuthLoginRequest,
+    AuthPasswordChangeRequest,
     AuthPasswordRecoveryRequest,
+    AuthProfileUpdateRequest,
     AuthRefreshRequest,
     AuthRegisterRequest,
 )
 from app.services.auth_service import (
     authenticate_user,
+    change_password,
     issue_token_pair,
     refresh_session,
     register_user,
     revoke_refresh_token,
     serialize_user,
+    update_me,
 )
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
@@ -53,9 +57,27 @@ def me(current_user=Depends(get_current_user)):
     return success_response("Usuário autenticado", serialize_user(current_user))
 
 
+@router.patch("/eu")
+def update_me_route(payload: AuthProfileUpdateRequest, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    user = update_me(db, current_user, payload.model_dump(exclude_unset=True))
+    return success_response("Perfil atualizado com sucesso", serialize_user(user))
+
+
+@router.post("/trocar-senha")
+def change_password_route(payload: AuthPasswordChangeRequest, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    change_password(db, current_user, payload.senhaAtual, payload.novaSenha)
+    return success_response("Senha alterada com sucesso", {"changed": True})
+
+
 @router.post("/recuperar-senha")
 def recover_password(payload: AuthPasswordRecoveryRequest, db: Session = Depends(get_db)):
-    user = authenticate_user if False else None
-    _ = db
-    _ = payload
-    return success_response("Se o e-mail existir, enviaremos instruções de recuperação", {"sent": True})
+    from sqlalchemy import select
+    from app.models.user import User as UserModel
+    email = payload.email.strip().lower()
+    user = db.scalar(select(UserModel).where(UserModel.email == email))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="E-mail não encontrado no sistema")
+    return success_response(
+        "Se o e-mail existir, enviaremos instruções de recuperação",
+        {"sent": True, "hint": "Funcionalidade de envio de e-mail pendente de configuração SMTP"},
+    )

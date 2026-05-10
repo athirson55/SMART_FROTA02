@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\athir\\\\SMART_FROTA02\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(python -c \"import openpyxl; print\\('ok'\\)\")",
+      "Bash(dir)"
+    ]
+  }
+}

@@ -10,27 +10,27 @@ import { getDrivers } from "../services/drivers";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovoVeiculoModal } from "../components/NovoVeiculoModal";
 
-const vehicleSpecsById = {
-  "V-1023": { km: 87420, capacity: "6.5 ton", type: "Caminhão pesado" },
-  "V-1048": { km: 124300, capacity: "12 ton", type: "Caminhão pesado" },
-  "V-1091": { km: 63800, capacity: "7 ton", type: "Caminhão médio" },
-  "V-1120": { km: 56200, capacity: "5 ton", type: "Caminhão leve" },
-  "V-1184": { km: 91540, capacity: "18 ton", type: "Caminhão pesado" },
-  "V-1210": { km: 44110, capacity: "16 ton", type: "Caminhão pesado" },
-  "V-1236": { km: 118760, capacity: "14 ton", type: "Caminhão pesado" },
-  "V-1261": { km: 38940, capacity: "25 ton", type: "Caminhão extrapesado" },
-};
 
 function normalizeVehicle(vehicle) {
   const motorist = vehicle.motorista || vehicle.driverRelation || {};
   const pendencies = vehicle.pendencies || vehicle.pendencias || [];
+  const rawStatus = vehicle.status || "ATIVO";
+  const statusLabel =
+    rawStatus === "MANUTENCAO" ? "Em manutenção" :
+    rawStatus === "EM_ROTA" ? "Em rota" :
+    rawStatus === "INATIVO" ? "Inativo" : "Ativo";
 
   return {
     ...vehicle,
     model: vehicle.model || vehicle.modelo || "",
     plate: vehicle.plate || vehicle.placa || "",
     driver: vehicle.driver || motorist.nome || motorist.name || "Sem motorista",
-    status: vehicle.status || "Ativo",
+    status: statusLabel,
+    km: vehicle.km ?? 0,
+    capacidade: vehicle.capacidade || null,
+    tipoVeiculo: vehicle.tipoVeiculo || null,
+    combustivel: vehicle.combustivel || null,
+    ano: vehicle.ano || null,
     pendencies,
   };
 }
@@ -178,16 +178,7 @@ export function VehiclesPage() {
     });
   }, [query, setSearchParams]);
 
-  const vehicleList = useMemo(() => {
-    return vehicles.map((vehicle) => ({
-      ...vehicle,
-      specs: vehicleSpecsById[vehicle.id] ?? {
-        km: 0,
-        capacity: "-",
-        type: "Caminhão",
-      },
-    }));
-  }, [vehicles]);
+  const vehicleList = useMemo(() => vehicles, [vehicles]);
 
   const filterCounters = useMemo(() => {
     const all = vehicleList.length;
@@ -389,11 +380,11 @@ export function VehiclesPage() {
                 <div className="fg-vehicle-specs">
                   <div>
                     <small>Km atual</small>
-                    <strong>{vehicle.specs.km.toLocaleString("pt-BR")}</strong>
+                    <strong>{(vehicle.km ?? 0).toLocaleString("pt-BR")}</strong>
                   </div>
                   <div>
-                    <small>Capacidade</small>
-                    <strong>{vehicle.specs.capacity}</strong>
+                    <small>{vehicle.capacidade ? "Capacidade" : (vehicle.tipoVeiculo ? "Tipo" : "Combustível")}</small>
+                    <strong>{vehicle.capacidade || vehicle.tipoVeiculo || vehicle.combustivel || "—"}</strong>
                   </div>
                   <div>
                     <small>Motorista</small>

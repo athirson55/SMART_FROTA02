@@ -11,6 +11,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { TableRow } from "../components/ui/TableRow";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { getVehicles } from "../services/vehicles";
+import { getDashboardReport } from "../services/reports";
 
 function normalizeDashboardVehicle(vehicle) {
   const pendencies = (vehicle.pendencias ?? []).map((pending) => ({
@@ -155,6 +156,7 @@ export function DashboardPage() {
   const [summaryModal, setSummaryModal] = useState(null);
   const [pendingModal, setPendingModal] = useState(null);
   const [vehicles, setVehicles] = useState([]);
+  const [dashboardKpis, setDashboardKpis] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -169,6 +171,13 @@ export function DashboardPage() {
         console.error("Erro ao carregar veículos do dashboard:", err);
         if (active) setVehicles([]);
       });
+
+    getDashboardReport()
+      .then((res) => {
+        if (!active) return;
+        setDashboardKpis(res.data?.data ?? null);
+      })
+      .catch(() => {});
 
     return () => {
       active = false;
@@ -191,24 +200,15 @@ export function DashboardPage() {
         .slice()
         .sort((a, b) => maintenanceWeight(b) - maintenanceWeight(a))[0] ?? null;
 
-    const totalCost = vehicles.reduce((sum, vehicle) => {
-      const base = vehicle.status === "Em manutenção" ? 9800 : 3400;
-      return sum + base + vehicle.pendencies.length * 700;
-    }, 0);
-
-    const criticalAlerts = vehicles.reduce(
+    const totalMaintenanceCost = dashboardKpis?.manutencoes?.custoTotal ?? null;
+    const criticalAlerts = dashboardKpis?.alertas?.criticos ?? vehicles.reduce(
       (count, vehicle) =>
-        count +
-        vehicle.pendencies.filter((pending) => pending.tone === "red").length,
+        count + vehicle.pendencies.filter((pending) => pending.tone === "red").length,
       0,
     );
 
-    return {
-      mostMaintenanceVehicle,
-      totalCost,
-      criticalAlerts,
-    };
-  }, [vehicles]);
+    return { mostMaintenanceVehicle, totalMaintenanceCost, criticalAlerts };
+  }, [vehicles, dashboardKpis]);
 
   const filteredVehicles = useMemo(() => {
     const query = vehicleFilter.trim().toLowerCase();
@@ -375,22 +375,26 @@ export function DashboardPage() {
 
         <section className="fg-dashboard-insights">
           <AppCard className="fg-home-summary-card">
-            <h4>Veículo com mais manutenções</h4>
+            <h4>Veículo com mais pendências</h4>
             <p>
               {insights.mostMaintenanceVehicle
-                ? `${insights.mostMaintenanceVehicle.id} • ${insights.mostMaintenanceVehicle.model}`
-                : "Sem dados"}
+                ? `${insights.mostMaintenanceVehicle.model} • ${insights.mostMaintenanceVehicle.plate}`
+                : "Sem pendências"}
             </p>
           </AppCard>
 
           <AppCard className="fg-home-summary-card">
-            <h4>Total de custos (simulado)</h4>
-            <p>R$ {insights.totalCost.toLocaleString("pt-BR")}</p>
+            <h4>Custo total de manutenções</h4>
+            <p>
+              {insights.totalMaintenanceCost !== null
+                ? `R$ ${Math.round(insights.totalMaintenanceCost).toLocaleString("pt-BR")}`
+                : "—"}
+            </p>
           </AppCard>
 
           <AppCard className="fg-home-summary-card">
             <h4>Alertas críticos</h4>
-            <p>{insights.criticalAlerts} itens de alta prioridade</p>
+            <p>{insights.criticalAlerts} {insights.criticalAlerts === 1 ? "alerta" : "alertas"} de alta prioridade</p>
           </AppCard>
         </section>
 

@@ -34,3 +34,12 @@ class AuthUserResponse(BaseModel):
     email: EmailStr
     role: str
     avatarFoto: str | None = None
+
+
+class AuthProfileUpdateRequest(BaseModel):
+    nome: str | None = Field(None, min_length=2, max_length=120)
+
+
+class AuthPasswordChangeRequest(BaseModel):
+    senhaAtual: str = Field(min_length=1, max_length=128)
+    novaSenha: str = Field(min_length=8, max_length=128)

@@ -143,6 +143,23 @@ def refresh_session(db: Session, refresh_token_raw: str) -> dict:
     }
 
 
+def update_me(db: Session, user: User, data: dict) -> User:
+    if data.get("nome"):
+        user.nome = data["nome"].strip()
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def change_password(db: Session, user: User, senha_atual: str, nova_senha: str) -> None:
+    if not verify_password(senha_atual, user.senha_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Senha atual incorreta")
+    user.senha_hash = hash_password(nova_senha)
+    db.add(user)
+    db.commit()
+
+
 def revoke_refresh_token(db: Session, refresh_token_raw: str) -> None:
     from app.core.security import safe_decode_token
 

@@ -5,8 +5,20 @@ import { useUiFeedback } from "../context/UiFeedbackContext";
 
 const STATUS_OPTS = [
   { value: "ATIVO", label: "Ativo" },
+  { value: "EM_ROTA", label: "Em rota" },
   { value: "MANUTENCAO", label: "Em manutenção" },
   { value: "INATIVO", label: "Inativo" },
+];
+const TIPO_OPTS = [
+  { value: "", label: "Selecione..." },
+  { value: "Caminhão leve", label: "Caminhão leve" },
+  { value: "Caminhão médio", label: "Caminhão médio" },
+  { value: "Caminhão pesado", label: "Caminhão pesado" },
+  { value: "Caminhão extrapesado", label: "Caminhão extrapesado" },
+  { value: "Van", label: "Van" },
+  { value: "Utilitário", label: "Utilitário" },
+  { value: "Ônibus", label: "Ônibus" },
+  { value: "Trator", label: "Trator" },
 ];
 const COMB_OPTS = [
   { value: "DIESEL", label: "Diesel" },
@@ -27,12 +39,19 @@ const DEFAULT_FORM = {
   combustivel: "DIESEL",
   chassi: "",
   km: "",
+  capacidade: "",
+  tipoVeiculo: "",
   motoristaId: "",
   vencimentoCRLV: "",
   vencimentoSeguro: "",
   proximaRevisaoKm: "",
   proximaRevisaoData: "",
 };
+
+function toDateInput(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toISOString().slice(0, 10); } catch { return ""; }
+}
 
 export function NovoVeiculoModal({
   open,
@@ -47,22 +66,34 @@ export function NovoVeiculoModal({
   const { showSuccess, showError } = useUiFeedback();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [form, setForm] = useState(DEFAULT_FORM);
 
-  const [form, setForm] = useState({
-    modelo: "",
-    marca: "",
-    placa: "",
-    ano: String(currentYear),
-    status: "ATIVO",
-    combustivel: "DIESEL",
-    chassi: "",
-    km: "",
-    motoristaId: "",
-    vencimentoCRLV: "",
-    vencimentoSeguro: "",
-    proximaRevisaoKm: "",
-    proximaRevisaoData: "",
-  });
+  useEffect(() => {
+    if (open) {
+      if (initialValues) {
+        setForm({
+          modelo: initialValues.modelo || initialValues.model || "",
+          marca: initialValues.marca || "",
+          placa: initialValues.placa || initialValues.plate || "",
+          ano: String(initialValues.ano || currentYear),
+          status: initialValues.status || "ATIVO",
+          combustivel: initialValues.combustivel || "DIESEL",
+          chassi: initialValues.chassi || "",
+          km: String(initialValues.km ?? ""),
+          capacidade: initialValues.capacidade || "",
+          tipoVeiculo: initialValues.tipoVeiculo || "",
+          motoristaId: initialValues.motoristaId || initialValues.motorista_id || "",
+          vencimentoCRLV: toDateInput(initialValues.vencimentoCRLV),
+          vencimentoSeguro: toDateInput(initialValues.vencimentoSeguro),
+          proximaRevisaoKm: String(initialValues.proximaRevisaoKm ?? ""),
+          proximaRevisaoData: toDateInput(initialValues.proximaRevisaoData),
+        });
+      } else {
+        setForm(DEFAULT_FORM);
+      }
+      setErrors({});
+    }
+  }, [open, initialValues]);
 
   function set(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -92,29 +123,20 @@ export function NovoVeiculoModal({
     try {
       const payload = {
         modelo: form.modelo.trim(),
-        marca: form.marca.trim(),
-        placa: form.placa
-          .trim()
-          .toUpperCase()
-          .replace(/[^A-Z0-9]/g, ""),
+        marca: form.marca.trim() || null,
+        placa: form.placa.trim().toUpperCase().replace(/[^A-Z0-9]/g, ""),
         ano: Number(form.ano) || currentYear,
         status: form.status,
-        combustivel: form.combustivel,
-        chassi: form.chassi.trim(),
+        combustivel: form.combustivel || null,
+        chassi: form.chassi.trim() || null,
         km: form.km ? Number(form.km) : 0,
+        capacidade: form.capacidade.trim() || null,
+        tipoVeiculo: form.tipoVeiculo || null,
         motoristaId: form.motoristaId || null,
-        vencimentoCRLV: form.vencimentoCRLV
-          ? new Date(form.vencimentoCRLV).toISOString()
-          : null,
-        vencimentoSeguro: form.vencimentoSeguro
-          ? new Date(form.vencimentoSeguro).toISOString()
-          : null,
-        proximaRevisaoKm: form.proximaRevisaoKm
-          ? Number(form.proximaRevisaoKm)
-          : null,
-        proximaRevisaoData: form.proximaRevisaoData
-          ? new Date(form.proximaRevisaoData).toISOString()
-          : null,
+        vencimentoCRLV: form.vencimentoCRLV ? new Date(form.vencimentoCRLV).toISOString() : null,
+        vencimentoSeguro: form.vencimentoSeguro ? new Date(form.vencimentoSeguro).toISOString() : null,
+        proximaRevisaoKm: form.proximaRevisaoKm ? Number(form.proximaRevisaoKm) : null,
+        proximaRevisaoData: form.proximaRevisaoData ? new Date(form.proximaRevisaoData).toISOString() : null,
       };
       const res = initialValues?.id
         ? await updateVehicle(initialValues.id, payload)
@@ -263,6 +285,29 @@ export function NovoVeiculoModal({
               value={form.km}
               onChange={(e) => set("km", e.target.value)}
             />
+          </div>
+
+          <div className="sf-field">
+            <label className="sf-label">Capacidade de carga</label>
+            <input
+              className="sf-input"
+              placeholder="Ex: 12 ton"
+              value={form.capacidade}
+              onChange={(e) => set("capacidade", e.target.value)}
+            />
+          </div>
+
+          <div className="sf-field">
+            <label className="sf-label">Tipo de veículo</label>
+            <select
+              className="sf-select"
+              value={form.tipoVeiculo}
+              onChange={(e) => set("tipoVeiculo", e.target.value)}
+            >
+              {TIPO_OPTS.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
           </div>
 
           <div className="sf-field">

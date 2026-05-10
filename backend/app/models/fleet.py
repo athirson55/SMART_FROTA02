@@ -39,6 +39,8 @@ class Vehicle(Base):
     combustivel: Mapped[str | None] = mapped_column(String(30), nullable=True)
     chassi: Mapped[str | None] = mapped_column(String(80), unique=True, nullable=True)
     km: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    capacidade: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    tipo_veiculo: Mapped[str | None] = mapped_column(String(60), nullable=True)
     motorista_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("motoristas.id", ondelete="SET NULL"), nullable=True, index=True)
     vencimento_crlv: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     vencimento_seguro: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
