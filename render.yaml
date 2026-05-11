@@ -22,6 +22,8 @@ services:
         value: "7"
       - key: CORS_ORIGINS
         value: "https://athirson55.github.io"
+      - key: FRONTEND_URL
+        value: "https://athirson55.github.io/SMART_FROTA02"
       - key: AUTO_CREATE_TABLES
         value: "true"
       - key: SEED_ON_STARTUP

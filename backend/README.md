@@ -36,6 +36,18 @@ PASSWORD_RESET_EXPIRE_MINUTES=60
 EMAIL_VERIFY_EXPIRE_HOURS=24
 ```
 
+## Deploy no Render
+
+Quando for publicar, os campos principais são:
+
+- `DATABASE_URL` vindo do banco criado pelo Render
+- `SECRET_KEY` gerado automaticamente
+- `ENVIRONMENT=production`
+- `CORS_ORIGINS=https://athirson55.github.io`
+- `FRONTEND_URL=https://athirson55.github.io/SMART_FROTA02`
+- `AUTO_CREATE_TABLES=true`
+- `SEED_ON_STARTUP=false`
+
 ## Migrações
 
 ```bash
