@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Frota</title>
 
+    <script>
+      if (window.location.hostname === "athirson55.github.io") {
+        const css = document.createElement("link");
+        css.rel = "stylesheet";
+        css.crossOrigin = "";
+        css.href = "/SMART_FROTA02/assets/main.css";
+        document.head.appendChild(css);
+
+        const script = document.createElement("script");
+        script.type = "module";
+        script.crossOrigin = "";
+        script.src = "/SMART_FROTA02/assets/app.js";
+        document.head.appendChild(script);
+      }
+    </script>
     <script type="module" crossorigin src="/SMART_FROTA02/assets/app.js"></script>
     <link rel="stylesheet" crossorigin href="/SMART_FROTA02/assets/main.css">
   </head>
