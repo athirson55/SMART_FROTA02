@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { recoverPasswordRequest } from "../services/auth";
 import truckImage from "../assets/caminhao.avif";
@@ -7,8 +7,9 @@ import truckImage from "../assets/caminhao.avif";
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
 export function RecoverPasswordPage() {
+  const navigate = useNavigate();
   const { showLoading, hideLoading, showSuccess, showError } = useUiFeedback();
-  const [email, setEmail]       = useState("");
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState("");
 
@@ -17,18 +18,30 @@ export function RecoverPasswordPage() {
     setFeedback("");
 
     const trimmed = email.trim();
-    if (!trimmed)           return (setFeedback("Preencha o campo de e-mail."), showError("Preencha o campo de e-mail"));
-    if (!isValidEmail(trimmed)) return (setFeedback("Informe um e-mail válido."), showError("E-mail inválido"));
+    if (!trimmed)
+      return (
+        setFeedback("Preencha o campo de e-mail."),
+        showError("Preencha o campo de e-mail")
+      );
+    if (!isValidEmail(trimmed))
+      return (
+        setFeedback("Informe um e-mail válido."),
+        showError("E-mail inválido")
+      );
 
     setIsLoading(true);
     showLoading("Enviando...");
 
     try {
       await recoverPasswordRequest({ email: trimmed });
-      setFeedback("Se o e-mail existir, você receberá o link de recuperação.");
+      navigate(
+        `/email-enviado?tipo=recuperacao&email=${encodeURIComponent(trimmed)}`,
+      );
       showSuccess("Solicitação enviada com sucesso");
     } catch {
-      setFeedback("Não foi possível enviar o link de recuperação. Tente novamente.");
+      setFeedback(
+        "Não foi possível enviar o link de recuperação. Tente novamente.",
+      );
       showError("Erro ao enviar solicitação");
     } finally {
       setIsLoading(false);
@@ -54,11 +67,19 @@ export function RecoverPasswordPage() {
           <label className="recovery-field-group" htmlFor="recoveryEmail">
             <span className="recovery-field-group__label">EMAIL</span>
             <input
-              id="recoveryEmail" type="email" placeholder="Digite seu e-mail"
-              value={email} onChange={(e) => setEmail(e.target.value)} required
+              id="recoveryEmail"
+              type="email"
+              placeholder="Digite seu e-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
             />
           </label>
-          <button className="recovery-submit-button" type="submit" disabled={isLoading}>
+          <button
+            className="recovery-submit-button"
+            type="submit"
+            disabled={isLoading}
+          >
             {isLoading ? "ENVIANDO..." : "ENVIAR LINK"}
           </button>
           <p className="recovery-login-link">

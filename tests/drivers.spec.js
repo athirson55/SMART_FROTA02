@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  BASE_URL,
   clearSession,
   createDriver,
   makeCredentials,
@@ -22,7 +23,7 @@ test.describe("drivers", () => {
 
     await clearSession(page);
     await registerUser(page, credentials);
-    await page.goto("http://localhost:5173/#/motoristas");
+    await page.goto(`${BASE_URL}/#/motoristas`);
     await createDriver(page, seedDriver);
   });
 

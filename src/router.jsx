@@ -3,6 +3,9 @@ import { LoginPage } from "./pages/LoginPage";
 import { CadastroPage } from "./pages/CadastroPage";
 import { RecoverPasswordPage } from "./pages/RecoverPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { EmailSentPage } from "./pages/EmailSentPage";
+import { EmailVerificationPage } from "./pages/EmailVerificationPage";
+import { ResetPasswordSuccessPage } from "./pages/ResetPasswordSuccessPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { HomePage } from "./pages/HomePage";
 import { PendingDetailPage } from "./pages/PendingDetailPage";
@@ -89,11 +92,19 @@ const routes = [
   },
   {
     path: "/redefinir-senha",
-    element: (
-      <GuestOnlyRoute>
-        <ResetPasswordPage />
-      </GuestOnlyRoute>
-    ),
+    element: <ResetPasswordPage />,
+  },
+  {
+    path: "/verificar-email",
+    element: <EmailVerificationPage />,
+  },
+  {
+    path: "/email-enviado",
+    element: <EmailSentPage />,
+  },
+  {
+    path: "/senha-redefinida",
+    element: <ResetPasswordSuccessPage />,
   },
   {
     path: "/",

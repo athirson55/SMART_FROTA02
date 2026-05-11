@@ -19,6 +19,8 @@ def seed_database(db: Session) -> None:
             role="ADMIN",
             avatar_foto=None,
             is_active=True,
+            email_verified=True,
+            email_verified_at=datetime.now(timezone.utc),
         )
         db.add(admin)
         db.flush()

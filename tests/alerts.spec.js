@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  BASE_URL,
   clearSession,
   createVehicle,
   loginUser,
@@ -7,8 +8,6 @@ import {
   openNotifications,
   registerUser,
 } from "./smoke-helpers.js";
-
-const BASE_URL = "http://localhost:5173";
 
 let credentials;
 let seedVehicle;
@@ -28,10 +27,16 @@ test.describe("alerts", () => {
   });
 
   test("página de alertas carrega", async ({ page }) => {
-    await expect(page.locator(".fg-alerts-page, .arc-page, main")).toBeVisible();
+    await expect(
+      page.locator(".fg-alerts-page, .arc-page, main"),
+    ).toBeVisible();
     // Either a table with alerts, or an empty-state message
     await expect(
-      page.locator(".fg-arc-table, .fg-arc-empty, .arc-card-list, [class*='alerts']").first(),
+      page
+        .locator(
+          ".fg-arc-table, .fg-arc-empty, .arc-card-list, [class*='alerts']",
+        )
+        .first(),
     ).toBeVisible({ timeout: 15000 });
   });
 
@@ -42,7 +47,11 @@ test.describe("alerts", () => {
       await resolvidoBtn.click();
       // Either a resolved alert row OR an empty-state indicator
       await expect(
-        page.locator("[class*='resolvido'], [class*='badge-green'], .fg-arc-empty").first(),
+        page
+          .locator(
+            "[class*='resolvido'], [class*='badge-green'], .fg-arc-empty",
+          )
+          .first(),
       ).toBeVisible({ timeout: 10000 });
     }
   });
@@ -58,7 +67,9 @@ test.describe("alerts", () => {
   });
 
   test("busca filtra por texto", async ({ page }) => {
-    const searchInput = page.locator("input[placeholder*='Buscar'], input[placeholder*='buscar']").first();
+    const searchInput = page
+      .locator("input[placeholder*='Buscar'], input[placeholder*='buscar']")
+      .first();
     if (await searchInput.isVisible()) {
       await searchInput.fill("xyz_inexistente_12345");
       await page.waitForTimeout(400);
@@ -76,10 +87,14 @@ test.describe("alerts", () => {
   test("notificações: painel abre e fecha", async ({ page }) => {
     await openNotifications(page);
     // Panel is visible
-    await expect(page.locator(".fg-header-notification-dropdown")).toBeVisible();
+    await expect(
+      page.locator(".fg-header-notification-dropdown"),
+    ).toBeVisible();
     // Press Escape to close
     await page.keyboard.press("Escape");
-    await expect(page.locator(".fg-header-notification-dropdown")).not.toBeVisible({ timeout: 3000 });
+    await expect(
+      page.locator(".fg-header-notification-dropdown"),
+    ).not.toBeVisible({ timeout: 3000 });
   });
 
   test("notificações: painel lista itens ou estado vazio", async ({ page }) => {
@@ -87,7 +102,9 @@ test.describe("alerts", () => {
     const dropdown = page.locator(".fg-header-notification-dropdown");
     await expect(dropdown).toBeVisible();
     // Must have either notification items or an empty-state message
-    const hasItems = await dropdown.locator("[class*='notification-item'], li, .fg-notification-row").count();
+    const hasItems = await dropdown
+      .locator("[class*='notification-item'], li, .fg-notification-row")
+      .count();
     const hasEmpty = await dropdown.locator("[class*='empty'], p").count();
     expect(hasItems + hasEmpty).toBeGreaterThan(0);
   });
@@ -99,19 +116,27 @@ test.describe("alerts", () => {
       .first();
 
     if (await resolveBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const rowBefore = page.locator(".fg-arc-table tbody tr, .arc-alert-row").first();
-      const hadPending = await rowBefore.locator("[class*='badge-red'], [class*='pendente']").count();
+      const rowBefore = page
+        .locator(".fg-arc-table tbody tr, .arc-alert-row")
+        .first();
+      const hadPending = await rowBefore
+        .locator("[class*='badge-red'], [class*='pendente']")
+        .count();
 
       await Promise.all([
         page.waitForResponse(
-          (res) => res.request().method() === "PATCH" && res.url().includes("/alertas"),
+          (res) =>
+            res.request().method() === "PATCH" &&
+            res.url().includes("/alertas"),
         ),
         resolveBtn.click(),
       ]);
 
       // Badge should change from red/pending to green/resolved
       if (hadPending > 0) {
-        await expect(rowBefore.locator("[class*='badge-green'], [class*='resolvido']")).toBeVisible({
+        await expect(
+          rowBefore.locator("[class*='badge-green'], [class*='resolvido']"),
+        ).toBeVisible({
           timeout: 10000,
         });
       }

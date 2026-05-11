@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  BASE_URL,
   clearSession,
   loginUser,
   logoutUser,
@@ -13,7 +14,7 @@ test.describe("auth", () => {
   test.beforeEach(async ({ page }) => {
     credentials = makeCredentials("auth");
     await clearSession(page);
-    await page.goto("http://localhost:5173/#/cadastro");
+    await page.goto(`${BASE_URL}/#/cadastro`);
     await page.waitForLoadState("domcontentloaded");
   });
 

@@ -8,7 +8,10 @@
       "Bash(dir)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\athir\\\\SMART_FROTA02\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(xargs grep -l \"SMTP\\\\|email\\\\|mail\")"
+      "Bash(xargs grep -l \"SMTP\\\\|email\\\\|mail\")",
+      "PowerShell(pg_isready -h localhost -p 5432 2>&1)",
+      "PowerShell(cd C:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\backend; $env:PYTHONPATH = \"C:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\backend\"; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd C:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\backend; $env:PYTHONPATH='C:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\backend'; C:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\.venv\\\\Scripts\\\\uvicorn.exe app.main:app --reload --host 0.0.0.0 --port 8000\" -WindowStyle Normal; Write-Host \"Backend iniciado em janela separada\")",
+      "PowerShell(cd C:\\\\Users\\\\athir\\\\SMART_FROTA02; Start-Process powershell -ArgumentList \"-NoExit\", \"-Command\", \"cd C:\\\\Users\\\\athir\\\\SMART_FROTA02; npm run dev\" -WindowStyle Normal; Write-Host \"Frontend iniciado em janela separada\")"
     ]
   }
 }

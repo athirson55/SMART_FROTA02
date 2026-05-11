@@ -15,8 +15,8 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("veiculos", sa.Column("capacidade", sa.String(40), nullable=True))
-    op.add_column("veiculos", sa.Column("tipo_veiculo", sa.String(60), nullable=True))
+    op.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS capacidade VARCHAR(40)")
+    op.execute("ALTER TABLE veiculos ADD COLUMN IF NOT EXISTS tipo_veiculo VARCHAR(60)")
 
 
 def downgrade():

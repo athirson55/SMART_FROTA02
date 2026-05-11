@@ -15,7 +15,7 @@ Sistema web completo de gestão de frotas para o mercado brasileiro.
 - Agendamentos — ordens de serviço com data, hora e local
 - Alertas — prioridade CRITICO / MEDIO / BAIXO com notificações
 - Relatórios — dashboard e exportação de dados
-- Autenticação — JWT com refresh token e "manter conectado"
+- Autenticação — JWT com refresh token, confirmação de email e recuperação de senha real
 
 ## Executando o frontend
 
@@ -52,6 +52,16 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:4173
 AUTO_CREATE_TABLES=True
 SEED_ON_STARTUP=True
 RATE_LIMIT_AUTH=10/minute
+FRONTEND_URL=http://localhost:5173
+RESEND_API_KEY=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@smartfrota.com
+EMAIL_FROM_NAME=Smart Frota
+PASSWORD_RESET_EXPIRE_MINUTES=60
+EMAIL_VERIFY_EXPIRE_HOURS=24
 ```
 
 A documentação interativa da API fica disponível em `http://localhost:8000/docs`.

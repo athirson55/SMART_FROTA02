@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\src\\\\context\" -File)",
+      "Bash(Get-Content \"c:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\src\\\\styles\\\\dashboard.css\")",
+      "Bash(Measure-Object -Line)",
+      "Bash(Select-Object Lines)",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\athir\\\\SMART_FROTA02\\\\src\\\\styles\\\\dashboard.css\"\\).Count)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/health)",
+      "Bash(powershell -Command \"\\(Get-Content 'src\\\\styles\\\\dashboard.css' -Raw\\) -replace '\\(?<!--sf-primary: \\)\\(?<!--sf-text-active: \\)#2f67d8', 'var\\(--sf-primary\\)' | Set-Content 'src\\\\styles\\\\dashboard.css' -Encoding UTF8\")",
+      "Bash(powershell -Command \"\\(Get-Content 'src\\\\styles\\\\dashboard.css' -Raw\\) -replace '\\(?<!\\(--sf-bg-active: |--sf-primary-light: \\)\\)#e8f1ff', 'var\\(--sf-primary-light\\)' | Set-Content 'src\\\\styles\\\\dashboard.css' -Encoding UTF8\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

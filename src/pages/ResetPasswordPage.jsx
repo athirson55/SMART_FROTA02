@@ -1,7 +1,35 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPasswordRequest } from "../services/auth";
 import truckImage from "../assets/caminhao.avif";
+
+const PASSWORD_RULES = [
+  { key: "length", label: "Mínimo 8 caracteres", test: (s) => s.length >= 8 },
+  {
+    key: "upper",
+    label: "Letra maiúscula (A-Z)",
+    test: (s) => /[A-Z]/.test(s),
+  },
+  {
+    key: "lower",
+    label: "Letra minúscula (a-z)",
+    test: (s) => /[a-z]/.test(s),
+  },
+  { key: "number", label: "Número (0-9)", test: (s) => /[0-9]/.test(s) },
+  {
+    key: "special",
+    label: "Caractere especial (!@#$...)",
+    test: (s) => /[^A-Za-z0-9]/.test(s),
+  },
+];
+
+function getPasswordStrength(password) {
+  if (!password) return { score: 0, passed: [] };
+  const passed = PASSWORD_RULES.filter((rule) => rule.test(password)).map(
+    (rule) => rule.key,
+  );
+  return { score: passed.length, passed };
+}
 
 export function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -13,16 +41,29 @@ export function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: "", text: "" });
 
+  const { score, passed } = useMemo(
+    () => getPasswordStrength(novaSenha),
+    [novaSenha],
+  );
+  const senhaForte = score === PASSWORD_RULES.length;
+  const senhasIguais = confirmar.length > 0 && novaSenha === confirmar;
+
   async function handleSubmit(e) {
     e.preventDefault();
     setFeedback({ type: "", text: "" });
 
     if (!token) {
-      setFeedback({ type: "error", text: "Link inválido. Solicite um novo link de recuperação." });
+      setFeedback({
+        type: "error",
+        text: "Link inválido. Solicite um novo link de recuperação.",
+      });
       return;
     }
-    if (novaSenha.length < 8) {
-      setFeedback({ type: "error", text: "A nova senha deve ter pelo menos 8 caracteres." });
+    if (!senhaForte) {
+      setFeedback({
+        type: "error",
+        text: "A senha deve atender a todos os requisitos de segurança.",
+      });
       return;
     }
     if (novaSenha !== confirmar) {
@@ -33,10 +74,11 @@ export function ResetPasswordPage() {
     setIsLoading(true);
     try {
       await resetPasswordRequest({ token, novaSenha });
-      setFeedback({ type: "success", text: "Senha redefinida com sucesso! Redirecionando para o login..." });
-      setTimeout(() => navigate("/login"), 2500);
+      navigate("/senha-redefinida");
     } catch (err) {
-      const msg = err?.response?.data?.message ?? "Token inválido ou expirado. Solicite um novo link.";
+      const msg =
+        err?.response?.data?.message ??
+        "Token inválido ou expirado. Solicite um novo link.";
       setFeedback({ type: "error", text: msg });
     } finally {
       setIsLoading(false);
@@ -69,8 +111,45 @@ export function ResetPasswordPage() {
               onChange={(e) => setNovaSenha(e.target.value)}
               required
               autoComplete="new-password"
+              className={!novaSenha ? "" : senhaForte ? "is-ok" : "is-error"}
             />
           </label>
+
+          <div className="reg-pwd-strength recovery-pwd-strength">
+            <div className="reg-pwd-bar-row">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="reg-pwd-bar-seg"
+                  style={{ background: i <= score ? "#7c3aed" : "#e2e8f0" }}
+                />
+              ))}
+              <span
+                className="reg-pwd-strength-label"
+                style={{ color: score > 0 ? "#7c3aed" : "#64748b" }}
+              >
+                {score > 0
+                  ? senhaForte
+                    ? "Senha forte"
+                    : "Senha fraca"
+                  : "Regras da senha"}
+              </span>
+            </div>
+            <ul className="reg-pwd-rules">
+              {PASSWORD_RULES.map((rule) => {
+                const ok = passed.includes(rule.key);
+                return (
+                  <li
+                    key={rule.key}
+                    className={`reg-pwd-rule ${ok ? "is-ok" : "is-fail"}`}
+                  >
+                    <span className="reg-pwd-rule-icon">{ok ? "✓" : "○"}</span>
+                    {rule.label}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
 
           <label className="recovery-field-group" htmlFor="confirmarSenha">
             <span className="recovery-field-group__label">CONFIRMAR SENHA</span>
@@ -82,13 +161,24 @@ export function ResetPasswordPage() {
               onChange={(e) => setConfirmar(e.target.value)}
               required
               autoComplete="new-password"
+              className={!confirmar ? "" : senhasIguais ? "is-ok" : "is-error"}
             />
           </label>
+
+          {confirmar.length > 0 && (
+            <p
+              className={`recovery-password-hint ${senhasIguais ? "is-ok" : "is-error"}`}
+            >
+              {senhasIguais
+                ? "As senhas coincidem."
+                : "As senhas não coincidem."}
+            </p>
+          )}
 
           <button
             className="recovery-submit-button"
             type="submit"
-            disabled={isLoading || !token}
+            disabled={isLoading || !token || !senhaForte || !senhasIguais}
           >
             {isLoading ? "SALVANDO..." : "REDEFINIR SENHA"}
           </button>

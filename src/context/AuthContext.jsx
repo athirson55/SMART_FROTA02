@@ -22,7 +22,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => readStoredUser());
   const [loading, setLoading] = useState(false);
 
-  // Valida o token ao montar — busca /auth/eu (server é fonte da verdade)
   useEffect(() => {
     const { token } = readStoredTokens();
     if (!token) return;
@@ -50,9 +49,7 @@ export function AuthProvider({ children }) {
         });
         const { token, refreshToken, usuario } = res.data.data;
         saveSession(token, refreshToken, usuario, manterConectado);
-        flushSync(() => {
-          setUser(usuario);
-        });
+        flushSync(() => setUser(usuario));
         return usuario;
       } finally {
         setLoading(false);
@@ -65,25 +62,33 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const res = await api.post("/auth/registrar", { nome, email, senha });
-      const { token, refreshToken, usuario } = res.data.data;
+      const data = res.data.data;
+      // New flow: email verification required — no tokens yet
+      if (data?.requiresEmailVerification) {
+        return { requiresEmailVerification: true, email: data.email };
+      }
+      // Legacy / skip-verification path
+      const { token, refreshToken, usuario } = data;
       saveSession(token, refreshToken, usuario, true);
-      flushSync(() => {
-        setUser(usuario);
-      });
+      flushSync(() => setUser(usuario));
       return usuario;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Called after email verification succeeds — stores session and sets user
+  const acceptVerification = useCallback((token, refreshToken, usuario) => {
+    saveSession(token, refreshToken, usuario, true);
+    flushSync(() => setUser(usuario));
+  }, []);
+
   const logout = useCallback(async () => {
     const { refreshToken } = readStoredTokens();
     try {
-      if (refreshToken) {
-        await api.post("/auth/logout", { refreshToken });
-      }
+      if (refreshToken) await api.post("/auth/logout", { refreshToken });
     } catch {
-      // Ignora falha no logout remoto e encerra a sessão localmente.
+      // ignore remote logout failure
     } finally {
       clearSession();
       setUser(null);
@@ -91,9 +96,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const updateUser = useCallback((updated) => {
-    flushSync(() => {
-      setUser(updated);
-    });
+    flushSync(() => setUser(updated));
     updateStoredUser(updated);
   }, []);
 
@@ -104,10 +107,11 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(user),
       login,
       registrar,
+      acceptVerification,
       logout,
       updateUser,
     }),
-    [user, loading, login, registrar, logout, updateUser],
+    [user, loading, login, registrar, acceptVerification, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

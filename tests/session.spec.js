@@ -8,14 +8,13 @@
  */
 import { expect, test } from "@playwright/test";
 import {
+  BASE_URL,
   clearSession,
   loginUser,
   logoutUser,
   makeCredentials,
   registerUser,
 } from "./smoke-helpers.js";
-
-const BASE_URL = "http://localhost:5173";
 const TOKEN_KEY = "smart-frota-token";
 const REFRESH_KEY = "smart-frota-refresh-token";
 
@@ -27,7 +26,8 @@ const REFRESH_KEY = "smart-frota-refresh-token";
 async function expireAccessToken(page) {
   await page.evaluate((key) => {
     // A well-formed but unsigned/expired JWT body
-    const expired = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
+    const expired =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9" +
       ".eyJzdWIiOiJleHBpcmVkIiwiZXhwIjoxfQ" +
       ".TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ";
     localStorage.setItem(key, expired);
@@ -62,7 +62,9 @@ test.describe("session", () => {
     await registerUser(page, credentials);
   });
 
-  test("acesso a rota privada sem token redireciona para login", async ({ page }) => {
+  test("acesso a rota privada sem token redireciona para login", async ({
+    page,
+  }) => {
     await clearSession(page);
     await page.goto(`${BASE_URL}/#/home`);
     await expect(page).toHaveURL(/#\/login/);
@@ -76,10 +78,14 @@ test.describe("session", () => {
     await page.reload({ waitUntil: "networkidle" });
     // Must still be on home (not redirected to login)
     await expect(page).toHaveURL(/#\/home/);
-    await expect(page.locator(".fg-home-user-chip-btn")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".fg-home-user-chip-btn")).toBeVisible({
+      timeout: 10000,
+    });
   });
 
-  test("access token expirado: refresh automático mantém login", async ({ page }) => {
+  test("access token expirado: refresh automático mantém login", async ({
+    page,
+  }) => {
     await page.goto(`${BASE_URL}/#/home`, { waitUntil: "networkidle" });
 
     // Corrupt only the access token — keep the valid refresh token
@@ -87,7 +93,9 @@ test.describe("session", () => {
 
     // Intercept the refresh call to confirm it happens
     const refreshResponse = page.waitForResponse(
-      (res) => res.url().includes("/auth/refresh") && res.request().method() === "POST",
+      (res) =>
+        res.url().includes("/auth/refresh") &&
+        res.request().method() === "POST",
       { timeout: 15000 },
     );
 
@@ -128,7 +136,9 @@ test.describe("session", () => {
     expect(token).toBeNull();
   });
 
-  test("após logout, acesso a rota privada redireciona para login", async ({ page }) => {
+  test("após logout, acesso a rota privada redireciona para login", async ({
+    page,
+  }) => {
     await page.goto(`${BASE_URL}/#/home`, { waitUntil: "networkidle" });
     await logoutUser(page);
 
@@ -136,23 +146,33 @@ test.describe("session", () => {
     await expect(page).toHaveURL(/#\/login/);
   });
 
-  test("login com credenciais corretas após logout restaura sessão", async ({ page }) => {
+  test("login com credenciais corretas após logout restaura sessão", async ({
+    page,
+  }) => {
     await page.goto(`${BASE_URL}/#/home`, { waitUntil: "networkidle" });
     await logoutUser(page);
     await loginUser(page, credentials);
     await expect(page).toHaveURL(/#\/home/);
-    await expect(page.locator(".fg-home-user-chip-btn")).toContainText(credentials.nome, {
-      timeout: 10000,
-    });
+    await expect(page.locator(".fg-home-user-chip-btn")).toContainText(
+      credentials.nome,
+      {
+        timeout: 10000,
+      },
+    );
   });
 
-  test("múltiplas chamadas simultâneas com token expirado só disparam um refresh", async ({ page }) => {
+  test("múltiplas chamadas simultâneas com token expirado só disparam um refresh", async ({
+    page,
+  }) => {
     await page.goto(`${BASE_URL}/#/home`, { waitUntil: "networkidle" });
     await expireAccessToken(page);
 
     let refreshCount = 0;
     page.on("response", (res) => {
-      if (res.url().includes("/auth/refresh") && res.request().method() === "POST") {
+      if (
+        res.url().includes("/auth/refresh") &&
+        res.request().method() === "POST"
+      ) {
         refreshCount++;
       }
     });

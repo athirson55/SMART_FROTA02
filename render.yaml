@@ -26,6 +26,12 @@ services:
         value: "true"
       - key: SEED_ON_STARTUP
         value: "false"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: "Smart Frota"
+      - key: EMAIL_VERIFY_EXPIRE_HOURS
+        value: "24"
       - key: RATE_LIMIT_AUTH
         value: "10/minute"
 

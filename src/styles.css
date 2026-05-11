@@ -249,6 +249,61 @@ body {
   max-width: 296px;
 }
 
+.auth-status-card {
+  min-height: 420px;
+}
+
+.auth-status-screen .recovery-card__description {
+  max-width: 320px;
+}
+
+.auth-status-pill {
+  align-self: flex-start;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 7px 12px;
+  text-transform: uppercase;
+}
+.auth-status-pill.success {
+  background: #dcfce7;
+  color: #166534;
+}
+.auth-status-pill.warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+.auth-status-pill.error,
+.auth-status-pill.loading {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.auth-status-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-status-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.recovery-password-hint {
+  font-size: 12px;
+  margin: -2px 0 0;
+}
+.recovery-password-hint.is-ok {
+  color: #16a34a;
+}
+.recovery-password-hint.is-error {
+  color: #dc2626;
+}
+
 /* ── Shared field group ── */
 .login-field-group,
 .register-field-group,
@@ -289,6 +344,16 @@ body {
 .register-field-group input:focus,
 .recovery-field-group input:focus {
   border-color: var(--brand-green);
+}
+.login-field-group input.is-error,
+.register-field-group input.is-error,
+.recovery-field-group input.is-error {
+  border-color: #dc2626;
+}
+.login-field-group input.is-ok,
+.register-field-group input.is-ok,
+.recovery-field-group input.is-ok {
+  border-color: #16a34a;
 }
 
 /* ── Login meta row ── */
@@ -394,6 +459,9 @@ body {
 /* ── Password strength ── */
 .reg-pwd-strength {
   margin-top: 8px;
+}
+.recovery-pwd-strength {
+  margin-top: 4px;
 }
 .reg-pwd-bar-row {
   display: flex;

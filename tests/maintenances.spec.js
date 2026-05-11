@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  BASE_URL,
   clearSession,
   createMaintenance,
   createVehicle,
@@ -27,10 +28,10 @@ test.describe("maintenances", () => {
 
     await clearSession(page);
     await registerUser(page, credentials);
-    await page.goto("http://localhost:5173/#/veiculos");
+    await page.goto(`${BASE_URL}/#/veiculos`);
     await createVehicle(page, seedVehicle);
 
-    await page.goto("http://localhost:5173/#/manutencoes");
+    await page.goto(`${BASE_URL}/#/manutencoes`);
     await createMaintenance(page, seedMaintenance, seedVehicle);
   });
 

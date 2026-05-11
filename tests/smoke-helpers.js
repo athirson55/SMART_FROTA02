@@ -1,23 +1,25 @@
 import { expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
-export const BASE_URL = "http://localhost:5173";
+export const BASE_URL =
+  process.env.E2E_BASE_URL || process.env.BASE_URL || "http://localhost:5173";
 
 export function makeCredentials(prefix) {
   const token = randomUUID().slice(0, 8);
   return {
     nome: `${prefix} ${token}`,
     email: `${prefix}.${token}@example.com`,
-    senha: "password123",
+    senha: "SmartFrota@123",
   };
 }
 
 export async function clearSession(page) {
-  await page.goto(BASE_URL, { waitUntil: "networkidle" });
+  await page.goto(BASE_URL, { waitUntil: "commit" });
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
   });
+  await page.goto(`${BASE_URL}/#/login`, { waitUntil: "networkidle" });
 }
 
 export async function registerUser(page, credentials) {
@@ -27,14 +29,31 @@ export async function registerUser(page, credentials) {
   await page.locator("#email").fill(credentials.email);
   await page.locator("#senha").fill(credentials.senha);
   await page.locator("#confirmar").fill(credentials.senha);
+  const registerResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("/auth/registrar"),
+  );
   await page.getByRole("button", { name: "CADASTRAR" }).click();
-  await expect(page).toHaveURL(/#\/home/);
-  await expect(
-    page
-      .getByRole("heading", { level: 2 })
-      .filter({ hasText: credentials.nome })
-      .first(),
-  ).toBeVisible();
+  const registerResponse = await registerResponsePromise;
+  const registerData = await registerResponse.json();
+  const debugToken = registerData?.data?.debugVerificationToken;
+
+  if (debugToken) {
+    await page.goto(
+      `${BASE_URL}/#/verificar-email?token=${encodeURIComponent(debugToken)}&email=${encodeURIComponent(credentials.email)}`,
+      { waitUntil: "networkidle" },
+    );
+    await page.waitForURL(/#\/home/, { timeout: 15000 });
+
+    await expect(page).toHaveURL(/#\/home/);
+    await expect(page.locator(".fg-home-user-chip-btn")).toContainText(
+      credentials.nome,
+    );
+    return;
+  }
+
+  await expect(page).toHaveURL(/#\/email-enviado/);
 }
 
 export async function loginUser(page, credentials) {

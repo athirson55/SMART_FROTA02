@@ -60,7 +60,15 @@ app.add_middleware(
 
 app.add_middleware(
     SimpleRateLimitMiddleware,
-    paths={"/auth/login", "/auth/registrar", "/auth/refresh", "/auth/recuperar-senha"},
+    paths={
+        "/auth/login",
+        "/auth/registrar",
+        "/auth/refresh",
+        "/auth/recuperar-senha",
+        "/auth/redefinir-senha",
+        "/auth/verificar-email",
+        "/auth/reenviar-verificacao",
+    },
     limit=auth_limit,
     window_seconds=60,
 )

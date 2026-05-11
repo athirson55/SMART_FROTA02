@@ -24,6 +24,16 @@ Copie o arquivo `.env` e ajuste a URL do PostgreSQL.
 DATABASE_URL=postgresql+psycopg://usuario:senha@localhost:5432/smartfrota
 SECRET_KEY=uma-chave-forte
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+FRONTEND_URL=http://localhost:5173
+RESEND_API_KEY=
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=noreply@smartfrota.com
+EMAIL_FROM_NAME=Smart Frota
+PASSWORD_RESET_EXPIRE_MINUTES=60
+EMAIL_VERIFY_EXPIRE_HOURS=24
 ```
 
 ## Migrações

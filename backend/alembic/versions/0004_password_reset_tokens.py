@@ -15,22 +15,22 @@ depends_on = None
 
 
 def upgrade():
-    op.create_table(
-        "password_reset_tokens",
-        sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column(
-            "user_id",
-            sa.String(36),
-            sa.ForeignKey("usuarios.id", ondelete="CASCADE"),
-            nullable=False,
-        ),
-        sa.Column("token_hash", sa.String(64), nullable=False, unique=True),
-        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("used_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    op.execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id VARCHAR(36) PRIMARY KEY,
+            user_id VARCHAR(36) NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+            token_hash VARCHAR(64) NOT NULL UNIQUE,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            used_at TIMESTAMP WITH TIME ZONE,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL
+        )
+        """
     )
-    op.create_index("ix_prt_token_hash", "password_reset_tokens", ["token_hash"])
-    op.create_index("ix_prt_user_id", "password_reset_tokens", ["user_id"])
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_prt_token_hash ON password_reset_tokens (token_hash)"
+    )
+    op.execute("CREATE INDEX IF NOT EXISTS ix_prt_user_id ON password_reset_tokens (user_id)")
 
 
 def downgrade():

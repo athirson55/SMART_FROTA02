@@ -3,9 +3,12 @@
  * Each describe block sets a fixed viewport before navigating.
  */
 import { expect, test } from "@playwright/test";
-import { clearSession, makeCredentials, registerUser } from "./smoke-helpers.js";
-
-const BASE_URL = "http://localhost:5173";
+import {
+  BASE_URL,
+  clearSession,
+  makeCredentials,
+  registerUser,
+} from "./smoke-helpers.js";
 
 const VIEWPORTS = {
   mobile: { width: 375, height: 812 },
@@ -39,9 +42,9 @@ test.describe("responsive — mobile (375px)", () => {
   test("sidebar está colapsada ou ocultada no mobile", async ({ page }) => {
     await setupUser(page, VIEWPORTS.mobile);
     await page.goto(`${BASE_URL}/#/home`, { waitUntil: "domcontentloaded" });
-    const sidebar = page.locator(
-      ".fg-sidebar, [class*='sidebar'], nav[class*='side'], aside",
-    ).first();
+    const sidebar = page
+      .locator(".fg-sidebar, [class*='sidebar'], nav[class*='side'], aside")
+      .first();
     if (await sidebar.isVisible()) {
       // Sidebar may be collapsed (narrow) instead of full-width
       const box = await sidebar.boundingBox();
@@ -53,7 +56,7 @@ test.describe("responsive — mobile (375px)", () => {
     await setupUser(page, VIEWPORTS.mobile);
     await page.goto(`${BASE_URL}/#/home`, { waitUntil: "networkidle" });
     const cards = page.locator(".fg-home-summary-card, .fg-home-action-card");
-    if (await cards.count() > 1) {
+    if ((await cards.count()) > 1) {
       const box0 = await cards.nth(0).boundingBox();
       const box1 = await cards.nth(1).boundingBox();
       if (box0 && box1) {
@@ -66,7 +69,9 @@ test.describe("responsive — mobile (375px)", () => {
   test("página de veículos: cards acessíveis no mobile", async ({ page }) => {
     await setupUser(page, VIEWPORTS.mobile);
     await page.goto(`${BASE_URL}/#/veiculos`, { waitUntil: "networkidle" });
-    await expect(page.locator(".fg-vehicles-page, .fg-vehicles-grid, main").first()).toBeVisible({
+    await expect(
+      page.locator(".fg-vehicles-page, .fg-vehicles-grid, main").first(),
+    ).toBeVisible({
       timeout: 15000,
     });
   });
@@ -79,12 +84,16 @@ test.describe("responsive — mobile (375px)", () => {
     expect(bodyWidth).toBeLessThanOrEqual(viewWidth + 4);
   });
 
-  test("tabela de relatórios tem scroll horizontal no mobile", async ({ page }) => {
+  test("tabela de relatórios tem scroll horizontal no mobile", async ({
+    page,
+  }) => {
     await setupUser(page, VIEWPORTS.mobile);
     await page.goto(`${BASE_URL}/#/relatorios`, { waitUntil: "networkidle" });
     const tableWrap = page.locator(".table-wrap").first();
     if (await tableWrap.isVisible({ timeout: 10000 }).catch(() => false)) {
-      const overflowX = await tableWrap.evaluate((el) => getComputedStyle(el).overflowX);
+      const overflowX = await tableWrap.evaluate(
+        (el) => getComputedStyle(el).overflowX,
+      );
       expect(["auto", "scroll", "hidden"]).toContain(overflowX);
     }
   });

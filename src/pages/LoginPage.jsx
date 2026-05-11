@@ -35,7 +35,12 @@ export function LoginPage() {
       );
       navigate("/home");
     } catch (err) {
-      const msg = err?.response?.data?.message || "E-mail ou senha incorretos.";
+      const notVerified =
+        err?.response?.status === 403 ||
+        err?.response?.headers?.["x-error-code"] === "EMAIL_NOT_VERIFIED";
+      const msg = notVerified
+        ? "Seu e-mail ainda não foi confirmado. Verifique a caixa de entrada ou solicite um novo link."
+        : err?.response?.data?.message || "E-mail ou senha incorretos.";
       setFeedback(msg);
       showError(msg);
     } finally {
