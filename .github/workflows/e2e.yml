@@ -1,0 +1,140 @@
+name: E2E (Playwright)
+
+on:
+  push:
+  pull_request:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  e2e:
+    name: Run E2E smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: smart_frota
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d smart_frota"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/smart_frota?schema=public
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: "npm"
+
+      - name: Cache backend node_modules
+        uses: actions/cache@v4
+        with:
+          path: SMART_FROTA_BACKEND_PG/SMART_FROTA_PG/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('SMART_FROTA_BACKEND_PG/SMART_FROTA_PG/package-lock.json', 'SMART_FROTA_BACKEND_PG/SMART_FROTA_PG/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
+
+      - name: Cache frontend node_modules
+        uses: actions/cache@v4
+        with:
+          path: SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND/package-lock.json', 'SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install backend dependencies
+        working-directory: SMART_FROTA_BACKEND_PG/SMART_FROTA_PG
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND
+        run: npm ci
+
+      - name: Prepare database (Prisma)
+        working-directory: SMART_FROTA_BACKEND_PG/SMART_FROTA_PG
+        run: |
+          echo "Waiting for Postgres to be ready..."
+          for i in {1..20}; do pg_isready -h localhost -p 5432 -U postgres && break || sleep 2; done
+          npx prisma db push
+          npx prisma migrate deploy || true
+          if [ -f src/config/seed.js ]; then node src/config/seed.js || true; fi
+
+      - name: Start backend (background)
+        working-directory: SMART_FROTA_BACKEND_PG/SMART_FROTA_PG
+        run: |
+          nohup node src/server.js > $GITHUB_WORKSPACE/backend.log 2>&1 &
+          echo $! > $GITHUB_WORKSPACE/backend.pid
+
+      - name: Wait for backend health
+        run: |
+          npx wait-on http://localhost:3001/health --timeout 60000
+
+      - name: Build frontend
+        working-directory: SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND
+        run: npm run build
+
+      - name: Start frontend preview (background)
+        working-directory: SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND
+        run: |
+          nohup npm run preview -- --port 5173 > $GITHUB_WORKSPACE/frontend.log 2>&1 &
+          echo $! > $GITHUB_WORKSPACE/frontend.pid
+
+      - name: Wait for frontend
+        run: |
+          npx wait-on http://localhost:5173 --timeout 60000
+
+      - name: Install Playwright browsers
+        working-directory: SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright smoke tests
+        working-directory: SMART_FROTA_FRONTEND_FINAL/SMART_FROTA_FRONTEND
+        run: |
+          npm run test:smoke -- --reporter=list
+
+      - name: Upload logs and Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            backend.log
+            frontend.log
+            frontend/playwright-report
+            playwright-report
+            test-results || true
+
+      - name: Print backend log on failure
+        if: failure()
+        run: |
+          echo "--- backend.log ---"
+          tail -n +1 $GITHUB_WORKSPACE/backend.log || true
+
+      - name: Print frontend log on failure
+        if: failure()
+        run: |
+          echo "--- frontend.log ---"
+          tail -n +1 $GITHUB_WORKSPACE/frontend.log || true
