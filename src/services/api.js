@@ -10,7 +10,10 @@ import {
 } from "./sessionStorage.js";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV
+    ? "http://localhost:8000"
+    : "https://smart-frota02-1.onrender.com");
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
