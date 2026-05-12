@@ -120,7 +120,7 @@ def _send_via_resend(api_key: str, to: str, subject: str, html: str, from_header
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return resp.status in (200, 201)
+            return 200 <= int(resp.status) < 300
     except Exception as exc:
         logger.error("Resend error to %s: %s", to, exc)
         return False
