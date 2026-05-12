@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +20,7 @@ from app.models.session_token import RefreshToken
 from app.models.user import User
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def _email_delivery_failed(message: str) -> HTTPException:
@@ -86,10 +88,9 @@ def send_verification_for_user(db: Session, user: User) -> str:
     raw_token = _create_verification_token(db, user)
     verify_url = f"{settings.frontend_url}/#/verificar-email?token={raw_token}"
     if not send_verification_email(user.email, user.nome, verify_url, settings):
-        db.rollback()
-        raise _email_delivery_failed(
-            "Não foi possível enviar o e-mail de confirmação. Tente novamente em instantes."
-        )
+        # Mantem o cadastro pendente de verificacao para evitar falso negativo
+        # no fluxo quando o provedor aceita mas a confirmacao local falha.
+        logger.error("Falha ao enviar verificacao para %s; usuario mantido pendente", user.email)
     db.commit()
     return raw_token
 
