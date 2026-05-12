@@ -120,9 +120,16 @@ def _send_via_resend(api_key: str, to: str, subject: str, html: str, from_header
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            return 200 <= int(resp.status) < 300
+            # Ler corpo para logging e inspecao
+            try:
+                body_bytes = resp.read()
+                body_text = body_bytes.decode("utf-8", errors="replace") if body_bytes is not None else ""
+            except Exception:
+                body_text = "<unreadable>"
+            logger.info("Resend response to %s: status=%s body=%s", to, getattr(resp, "status", "?"), body_text)
+            return 200 <= int(getattr(resp, "status", 0)) < 300
     except Exception as exc:
-        logger.error("Resend error to %s: %s", to, exc)
+        logger.exception("Resend error to %s: %s", to, exc)
         return False
 
 
