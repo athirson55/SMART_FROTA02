@@ -11,6 +11,8 @@ from app.database.init_db import seed_database
 from app.database.session import SessionLocal, create_tables
 from app.middlewares.rate_limit import SimpleRateLimitMiddleware
 from app.routes import alerts, appointments, auth, drivers, health, maintenances, notifications, reports, settings as settings_routes, users, vehicles
+import re
+import os
 
 app_settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -25,6 +27,15 @@ if app_settings.environment == "development":
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Log database host/port (mascarado) para facilitar debugging no Render
+    try:
+        db_url = app_settings.database_url or os.getenv("DATABASE_URL", "")
+        m = re.search(r"@([^:/]+)(?::([0-9]+))?", db_url)
+        host = m.group(1) if m else "(unknown)"
+        port = m.group(2) if m and m.group(2) else "(default)"
+        logger.info("DATABASE_URL host=%s port=%s", host, port)
+    except Exception:
+        logger.warning("Falha ao analisar DATABASE_URL para debug")
     if app_settings.auto_create_tables:
         try:
             create_tables()
