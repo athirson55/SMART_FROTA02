@@ -186,9 +186,10 @@ def _dispatch(settings, to: str, subject: str, html: str) -> bool:
         return _send_via_resend(settings.resend_api_key, to, subject, html, _from_header(settings))
     if getattr(settings, "smtp_host", ""):
         return _send_via_smtp(settings, to, subject, html)
-    if getattr(settings, "environment", "development") != "production":
+    if not getattr(settings, "is_production_like", False):
         logger.info("[DEV] Email delivery not configured for %s: %s", to, subject)
         return True
+    logger.error("Email provider not configured in production-like environment for %s: %s", to, subject)
     return False
 
 
@@ -223,9 +224,10 @@ def _dispatch_with_text(settings, to: str, subject: str, html: str, text: str) -
             return False
     if getattr(settings, "smtp_host", ""):
         return _send_via_smtp(settings, to, subject, html)
-    if getattr(settings, "environment", "development") != "production":
+    if not getattr(settings, "is_production_like", False):
         logger.info("[DEV] Email delivery not configured for %s: %s", to, subject)
         return True
+    logger.error("Email provider not configured in production-like environment for %s: %s", to, subject)
     return False
 
 

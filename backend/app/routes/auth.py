@@ -39,7 +39,7 @@ settings = get_settings()
 def registrar(payload: AuthRegisterRequest, db: Session = Depends(get_db)):
     user, verification_token = register_user(db, nome=payload.nome, email=payload.email, senha=payload.senha)
     payload_data = {"requiresEmailVerification": True, "email": user.email}
-    if settings.environment != "production" and verification_token:
+    if not settings.is_production_like and verification_token:
         payload_data["debugVerificationToken"] = verification_token
     return success_response(
         "Cadastro realizado! Verifique seu e-mail para ativar a conta.",
@@ -86,7 +86,7 @@ def verificar_email(payload: AuthEmailVerificationRequest, db: Session = Depends
 def reenviar_verificacao(payload: AuthResendVerificationRequest, db: Session = Depends(get_db)):
     verification_token = resend_verification_email(db, payload.email.strip().lower())
     payload_data = {"sent": True}
-    if settings.environment != "production" and verification_token:
+    if not settings.is_production_like and verification_token:
         payload_data["debugVerificationToken"] = verification_token
     return success_response(
         "Se o e-mail existir e ainda não estiver confirmado, reenviaremos as instruções.",
