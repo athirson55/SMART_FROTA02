@@ -70,6 +70,17 @@ def _build_verification_html(name: str, verify_url: str, expire_hours: int) -> s
     return _BASE.replace("{BODY}", body)
 
 
+def _build_verification_text(name: str, verify_url: str, expire_hours: int) -> str:
+    return (
+        f"Olá, {name}!\n\n"
+        "Você criou uma conta no Smart Frota.\n"
+        "Para ativar seu acesso, confirme seu e-mail usando o link abaixo:\n\n"
+        f"{verify_url}\n\n"
+        f"Este link expira em {expire_hours} hora(s).\n\n"
+        "Se você não criou esta conta, ignore esta mensagem."
+    )
+
+
 def _build_reset_html(reset_url: str, expire_minutes: int) -> str:
     body = (
         '<h2 style="margin:0 0 8px;font-size:22px;color:#1e2a3b;">Redefinicao de Senha</h2>'
@@ -85,6 +96,16 @@ def _build_reset_html(reset_url: str, expire_minutes: int) -> str:
     return _BASE.replace("{BODY}", body)
 
 
+def _build_reset_text(reset_url: str, expire_minutes: int) -> str:
+    return (
+        "Redefinição de senha\n\n"
+        "Recebemos uma solicitação de redefinição de senha para sua conta no Smart Frota.\n\n"
+        f"Abra este link para criar uma nova senha:\n{reset_url}\n\n"
+        f"Este link expira em {expire_minutes} minutos.\n\n"
+        "Se você não solicitou a redefinição, sua senha permanece inalterada."
+    )
+
+
 def _build_reset_success_html(name: str) -> str:
     body = (
         '<h2 style="margin:0 0 8px;font-size:22px;color:#1e2a3b;">Senha alterada com sucesso</h2>'
@@ -96,6 +117,14 @@ def _build_reset_success_html(name: str) -> str:
         "Se voce nao realizou esta alteracao, entre em contato com o suporte imediatamente.</p></div>"
     )
     return _BASE.replace("{BODY}", body)
+
+
+def _build_reset_success_text(name: str) -> str:
+    return (
+        f"Olá, {name}!\n\n"
+        "Sua senha foi redefinida com sucesso. Você já pode acessar o Smart Frota com a nova senha.\n\n"
+        "Se você não realizou esta alteração, entre em contato com o suporte imediatamente."
+    )
 
 
 def _from_header(settings) -> str:
@@ -165,10 +194,48 @@ def _dispatch(settings, to: str, subject: str, html: str) -> bool:
     return False
 
 
+def _dispatch_with_text(settings, to: str, subject: str, html: str, text: str) -> bool:
+    if getattr(settings, "resend_api_key", ""):
+        payload = json.dumps(
+            {
+                "from": _from_header(settings),
+                "to": [to],
+                "subject": subject,
+                "html": html,
+                "text": text,
+            }
+        ).encode()
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={"Authorization": f"Bearer {settings.resend_api_key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                try:
+                    body_bytes = resp.read()
+                    body_text = body_bytes.decode("utf-8", errors="replace") if body_bytes is not None else ""
+                except Exception:
+                    body_text = "<unreadable>"
+                logger.info("Resend response to %s: status=%s body=%s", to, getattr(resp, "status", "?"), body_text)
+                return 200 <= int(getattr(resp, "status", 0)) < 300
+        except Exception as exc:
+            logger.exception("Resend error to %s: %s", to, exc)
+            return False
+    if getattr(settings, "smtp_host", ""):
+        return _send_via_smtp(settings, to, subject, html)
+    if getattr(settings, "environment", "development") != "production":
+        logger.info("[DEV] Email delivery not configured for %s: %s", to, subject)
+        return True
+    return False
+
+
 def send_verification_email(to_email: str, name: str, verify_url: str, settings) -> bool:
     expire_hours = getattr(settings, "email_verify_expire_hours", 24)
     html = _build_verification_html(name, verify_url, expire_hours)
-    sent = _dispatch(settings, to_email, "Smart Frota - Confirme seu e-mail", html)
+    text = _build_verification_text(name, verify_url, expire_hours)
+    sent = _dispatch_with_text(settings, to_email, "Smart Frota - Confirme seu e-mail", html, text)
     if not sent:
         logger.info("[DEV] Verification URL for %s: %s", to_email, verify_url)
     return sent
@@ -177,7 +244,8 @@ def send_verification_email(to_email: str, name: str, verify_url: str, settings)
 def send_password_reset_email(to_email: str, reset_url: str, settings) -> bool:
     expire_minutes = getattr(settings, "password_reset_expire_minutes", 60)
     html = _build_reset_html(reset_url, expire_minutes)
-    sent = _dispatch(settings, to_email, "Smart Frota - Recuperacao de Senha", html)
+    text = _build_reset_text(reset_url, expire_minutes)
+    sent = _dispatch_with_text(settings, to_email, "Smart Frota - Recuperacao de Senha", html, text)
     if not sent:
         logger.info("[DEV] Reset URL for %s: %s", to_email, reset_url)
     return sent
@@ -185,4 +253,5 @@ def send_password_reset_email(to_email: str, reset_url: str, settings) -> bool:
 
 def send_password_reset_success_email(to_email: str, name: str, settings) -> None:
     html = _build_reset_success_html(name)
-    _dispatch(settings, to_email, "Smart Frota - Senha alterada com sucesso", html)
+    text = _build_reset_success_text(name)
+    _dispatch_with_text(settings, to_email, "Smart Frota - Senha alterada com sucesso", html, text)
