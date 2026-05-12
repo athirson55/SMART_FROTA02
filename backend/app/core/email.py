@@ -100,7 +100,14 @@ def _build_reset_success_html(name: str) -> str:
 
 def _from_header(settings) -> str:
     name = getattr(settings, "email_from_name", "Smart Frota")
-    return f"{name} <{settings.smtp_from}>"
+    sender = getattr(settings, "smtp_from", "")
+    # Fallback seguro para Resend quando o remetente nao estiver configurado
+    # com um dominio verificado (ex.: valor padrao local).
+    if getattr(settings, "resend_api_key", "") and (
+        not sender or sender.endswith("@smartfrota.com")
+    ):
+        sender = "onboarding@resend.dev"
+    return f"{name} <{sender}>"
 
 
 def _send_via_resend(api_key: str, to: str, subject: str, html: str, from_header: str) -> bool:
