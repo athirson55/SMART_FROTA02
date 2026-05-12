@@ -129,13 +129,11 @@ def _build_reset_success_text(name: str) -> str:
 
 def _from_header(settings) -> str:
     name = getattr(settings, "email_from_name", "Smart Frota")
-    sender = getattr(settings, "smtp_from", "")
-    # Fallback seguro para Resend quando o remetente nao estiver configurado
-    # com um dominio verificado (ex.: valor padrao local).
-        if getattr(settings, "resend_api_key", ""):
-            sender = "onboarding@resend.dev"
-        else:
-            sender = getattr(settings, "smtp_from", "")
+    # Resend funciona melhor com o remetente padrao verificado.
+    if getattr(settings, "resend_api_key", ""):
+        sender = "onboarding@resend.dev"
+    else:
+        sender = getattr(settings, "smtp_from", "")
     return f"{name} <{sender}>"
 
 
