@@ -132,10 +132,10 @@ def _from_header(settings) -> str:
     sender = getattr(settings, "smtp_from", "")
     # Fallback seguro para Resend quando o remetente nao estiver configurado
     # com um dominio verificado (ex.: valor padrao local).
-    if getattr(settings, "resend_api_key", "") and (
-        not sender or sender.endswith("@smartfrota.com")
-    ):
-        sender = "onboarding@resend.dev"
+        if getattr(settings, "resend_api_key", ""):
+            sender = "onboarding@resend.dev"
+        else:
+            sender = getattr(settings, "smtp_from", "")
     return f"{name} <{sender}>"
 
 
