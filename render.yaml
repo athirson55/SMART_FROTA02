@@ -6,10 +6,15 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      # DATABASE_URL é automaticamente preenchida a partir do banco gerenciado
+      # pelo Render. Se a variável não estiver definida no ambiente, a app
+      # usará o valor padrão (localhost) e falhará com erro de conexão.
       - key: DATABASE_URL
         fromDatabase:
           name: smart-frota-db
           property: connectionString
+        # Nota: não insira a connection string diretamente no YAML com credenciais.
+        # Use o painel do Render para revisar/fornecer a variável se necessário.
       - key: SECRET_KEY
         generateValue: true
       - key: APP_NAME
@@ -28,6 +33,9 @@ services:
         value: "true"
       - key: SEED_ON_STARTUP
         value: "false"
+      # EMAIL PROVIDER (produção): configurar aqui a chave Resend (preferido)
+      # ou as variáveis SMTP abaixo via Render -> Environment (NÃO commitar valores secretos).
+      # Exemplo: Key=RESEND_API_KEY, Value=sk_...  (defina no painel do Render)
       - key: RESEND_API_KEY
         sync: false
       - key: EMAIL_FROM_NAME
