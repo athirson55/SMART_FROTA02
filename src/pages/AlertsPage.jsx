@@ -5,6 +5,7 @@ import { AppHeader } from "../components/AppHeader";
 import {
   getAlerts,
   resolveAlert as resolveAlertRequest,
+  unresolveAlert as unresolveAlertRequest,
 } from "../services/alerts";
 
 const TYPE_CONFIG = {
@@ -285,6 +286,21 @@ export function AlertsPage() {
     } catch (err) {
       console.error("Erro ao resolver alerta:", err);
       showToast(err?.response?.data?.message || "Erro ao resolver alerta.");
+    }
+  }
+
+  async function unresolveAlert(id) {
+    const original = alerts.find((item) => item.id === id);
+    if (!original || original.status !== "resolvido") return;
+
+    try {
+      const res = await unresolveAlertRequest(id);
+      const saved = normalizeAlert(res.data?.data ?? res.data ?? original);
+      setAlerts((prev) => prev.map((item) => (item.id === id ? saved : item)));
+      showToast("Alerta reaberto com sucesso!");
+    } catch (err) {
+      console.error("Erro ao reabrir alerta:", err);
+      showToast(err?.response?.data?.message || "Erro ao reabrir alerta.");
     }
   }
 
@@ -580,9 +596,14 @@ export function AlertsPage() {
                         onClick={(event) => event.stopPropagation()}
                       >
                         {isResolved ? (
-                          <span className="arc-btn resolved-label">
-                            Resolvido
-                          </span>
+                          <button
+                            className="arc-btn"
+                            type="button"
+                            title="Reabrir alerta"
+                            onClick={() => unresolveAlert(alert.id)}
+                          >
+                            ↩ Reabrir
+                          </button>
                         ) : (
                           <button
                             className="arc-btn resolve"
@@ -841,19 +862,30 @@ export function AlertsPage() {
                 >
                   Fechar
                 </button>
-                <button
-                  className="btn-full success"
-                  type="button"
-                  disabled={selectedAlert.status === "resolvido"}
-                  onClick={() => {
-                    resolveAlert(selectedAlert.id);
-                    setSelectedId(null);
-                  }}
-                >
-                  {selectedAlert.status === "resolvido"
-                    ? "Já resolvido"
-                    : "Marcar como resolvido"}
-                </button>
+                {selectedAlert.status === "resolvido" ? (
+                  <button
+                    className="btn-full"
+                    type="button"
+                    style={{ background: "var(--amber, #D97706)", color: "#fff" }}
+                    onClick={() => {
+                      unresolveAlert(selectedAlert.id);
+                      setSelectedId(null);
+                    }}
+                  >
+                    ↩ Reabrir alerta
+                  </button>
+                ) : (
+                  <button
+                    className="btn-full success"
+                    type="button"
+                    onClick={() => {
+                      resolveAlert(selectedAlert.id);
+                      setSelectedId(null);
+                    }}
+                  >
+                    Marcar como resolvido
+                  </button>
+                )}
               </div>
             </div>
           ) : null}

@@ -95,6 +95,7 @@ export function AdicionarMotoristaModal({
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       e.email = "E-mail inválido";
     if (!form.cnh.trim()) e.cnh = "CNH é obrigatória";
+    else if (!/^\d{9}$/.test(form.cnh.trim())) e.cnh = "CNH deve ter exatamente 9 dígitos numéricos";
     return e;
   }
 
@@ -248,9 +249,11 @@ export function AdicionarMotoristaModal({
             </label>
             <input
               className={`sf-input ${errors.cnh ? "is-error" : ""}`}
-              placeholder="Ex: 05498233411"
+              placeholder="Ex: 012345678"
               value={form.cnh}
-              onChange={(e) => set("cnh", e.target.value)}
+              maxLength={9}
+              inputMode="numeric"
+              onChange={(e) => set("cnh", e.target.value.replace(/\D/g, "").slice(0, 9))}
             />
             {errors.cnh && <span className="sf-field-error">{errors.cnh}</span>}
           </div>

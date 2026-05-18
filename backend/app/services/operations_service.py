@@ -4,9 +4,28 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.fleet import Vehicle, VehiclePendencia
-from app.models.operations import Alert, Appointment, Maintenance, Notification
+from app.models.fleet import Driver, Vehicle, VehiclePendencia
+from app.models.operations import Alert, Appointment, Maintenance, Notification, Route
 from app.services.fleet_service import serialize_vehicle
+
+
+def serialize_route(item: Route) -> dict:
+    return {
+        "id": item.id,
+        "veiculoId": item.vehicle_id,
+        "motoristaId": item.motorista_id,
+        "veiculo": serialize_vehicle(item.vehicle, include_driver=True) if item.vehicle else None,
+        "motorista": {"id": item.motorista.id, "nome": item.motorista.nome} if item.motorista else None,
+        "origem": item.origem,
+        "destino": item.destino,
+        "status": item.status,
+        "dataInicio": item.data_inicio,
+        "dataFim": item.data_fim,
+        "distanciaKm": float(item.distancia_km) if item.distancia_km is not None else None,
+        "observacoes": item.observacoes,
+        "createdAt": item.created_at,
+        "updatedAt": item.updated_at,
+    }
 
 
 def serialize_maintenance(item: Maintenance) -> dict:
@@ -142,6 +161,7 @@ def create_maintenance(db: Session, data: dict) -> Maintenance:
 
 
 def update_maintenance(db: Session, item: Maintenance, data: dict) -> Maintenance:
+    old_status = item.status
     if data.get("veiculoId"):
         item.vehicle_id = _find_vehicle(db, data["veiculoId"]).id
     mapping = {
@@ -159,6 +179,34 @@ def update_maintenance(db: Session, item: Maintenance, data: dict) -> Maintenanc
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(item, field, data[key])
+    # When a maintenance is completed, resolve linked pendências and alerts
+    new_status = (data.get("status") or old_status or "").upper()
+    if new_status == "CONCLUIDA" and old_status != "CONCLUIDA":
+        now = datetime.now(timezone.utc)
+        # Resolve pendências linked by source_id
+        pendencias_by_src = db.scalars(
+            select(VehiclePendencia).where(
+                VehiclePendencia.vehicle_id == item.vehicle_id,
+                VehiclePendencia.source_type == "manutencao",
+                VehiclePendencia.source_id == item.id,
+                VehiclePendencia.resolved_at.is_(None),
+            )
+        ).all()
+        for p in pendencias_by_src:
+            p.resolved_at = now
+            db.add(p)
+            # Also resolve alerts generated from this pendência
+            alerts_linked = db.scalars(
+                select(Alert).where(
+                    Alert.vehicle_id == item.vehicle_id,
+                    Alert.titulo == p.label,
+                    Alert.status != "RESOLVIDO",
+                )
+            ).all()
+            for a in alerts_linked:
+                a.status = "RESOLVIDO"
+                a.resolvido_em = now
+                db.add(a)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -320,7 +368,41 @@ def resolve_alert(db: Session, item: Alert, observacao: str | None = None) -> Al
     item.status = "RESOLVIDO"
     item.resolvido_em = datetime.now(timezone.utc)
     if observacao is not None:
-                item.observacao = observacao
+        item.observacao = observacao
+    # Resolve any linked unresolved pendências with the same vehicle + label
+    if item.vehicle_id:
+        pendencias = db.scalars(
+            select(VehiclePendencia).where(
+                VehiclePendencia.vehicle_id == item.vehicle_id,
+                VehiclePendencia.label == item.titulo,
+                VehiclePendencia.resolved_at.is_(None),
+            )
+        ).all()
+        now = datetime.now(timezone.utc)
+        for p in pendencias:
+            p.resolved_at = now
+            db.add(p)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def unresolve_alert(db: Session, item: Alert) -> Alert:
+    item.status = "PENDENTE"
+    item.resolvido_em = None
+    # Re-open linked pendências that were resolved together with this alert
+    if item.vehicle_id:
+        pendencias = db.scalars(
+            select(VehiclePendencia).where(
+                VehiclePendencia.vehicle_id == item.vehicle_id,
+                VehiclePendencia.label == item.titulo,
+                VehiclePendencia.resolved_at.isnot(None),
+            )
+        ).all()
+        for p in pendencias:
+            p.resolved_at = None
+            db.add(p)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -414,5 +496,79 @@ def update_notification(db: Session, item: Notification, data: dict) -> Notifica
 
 
 def delete_notification(db: Session, item: Notification) -> None:
+    db.delete(item)
+    db.commit()
+
+
+# ── Rotas ────────────────────────────────────────────────────────────────────
+
+def list_routes(db: Session, search: str | None = None, status_value: str | None = None, vehicle_id: str | None = None, page: int = 1, limit: int = 25):
+    query = select(Route).options(joinedload(Route.vehicle).joinedload(Vehicle.motorista), joinedload(Route.motorista))
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.where((Route.origem.ilike(term)) | (Route.destino.ilike(term)))
+    if status_value and status_value.lower() != "todos":
+        query = query.where(Route.status == status_value.upper())
+    if vehicle_id:
+        query = query.where(Route.vehicle_id == vehicle_id)
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    items = db.scalars(query.order_by(Route.created_at.desc()).offset((page - 1) * limit).limit(limit)).unique().all()
+    return items, total, {"page": page, "limit": limit}
+
+
+def get_route(db: Session, route_id: str) -> Route:
+    item = db.scalar(select(Route).options(joinedload(Route.vehicle).joinedload(Vehicle.motorista), joinedload(Route.motorista)).where(Route.id == route_id))
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rota não encontrada")
+    return item
+
+
+def create_route(db: Session, data: dict) -> Route:
+    vehicle = _find_vehicle(db, data["veiculoId"])
+    motorista_id = data.get("motoristaId") or vehicle.motorista_id or None
+    item = Route(
+        vehicle_id=vehicle.id,
+        motorista_id=motorista_id,
+        origem=data["origem"].strip(),
+        destino=data["destino"].strip(),
+        status=data.get("status") or "PENDENTE",
+        data_inicio=data.get("dataInicio"),
+        data_fim=data.get("dataFim"),
+        distancia_km=data.get("distanciaKm"),
+        observacoes=data.get("observacoes") or None,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def update_route(db: Session, item: Route, data: dict) -> Route:
+    if data.get("veiculoId"):
+        item.vehicle_id = _find_vehicle(db, data["veiculoId"]).id
+    mapping = {
+        "motoristaId": "motorista_id",
+        "origem": "origem",
+        "destino": "destino",
+        "status": "status",
+        "dataInicio": "data_inicio",
+        "dataFim": "data_fim",
+        "distanciaKm": "distancia_km",
+        "observacoes": "observacoes",
+    }
+    for key, field in mapping.items():
+        if key in data and data[key] is not None:
+            setattr(item, field, data[key])
+    if item.status == "EM_ANDAMENTO" and item.data_inicio is None:
+        item.data_inicio = datetime.now(timezone.utc)
+    if item.status in ("CONCLUIDA", "CANCELADA") and item.data_fim is None:
+        item.data_fim = datetime.now(timezone.utc)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def delete_route(db: Session, item: Route) -> None:
     db.delete(item)
     db.commit()

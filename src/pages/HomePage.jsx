@@ -85,7 +85,7 @@ function buildSummaryCards(report) {
         `${report.motoristas?.emRota ?? 0} em rota`,
       ],
       action: "Acompanhar",
-      route: "/agendamentos",
+      route: "/rotas",
       icon: "clock",
       iconTone: "purple",
     },
@@ -199,8 +199,8 @@ export function HomePage() {
         })),
       "Entregas atrasadas": [
         {
-          title: `${dashboard.agendamentos?.proximos ?? 0} próximos`,
-          subtitle: "Agendamentos vindos do backend",
+          title: `${dashboard.agendamentos?.proximos ?? 0} agendamentos próximos`,
+          subtitle: "Acesse Rotas para acompanhar as entregas em andamento",
         },
       ],
       "Frota disponível": [

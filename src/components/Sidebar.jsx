@@ -31,6 +31,7 @@ const sidebarItems = [
     icon: "calendar",
     to: "/agendamentos",
   },
+  { key: "rotas", label: "Rotas", icon: "pin", to: "/rotas" },
   { key: "alertas", label: "Alertas", icon: "bell", to: "/alertas" },
   {
     key: "relatorios",

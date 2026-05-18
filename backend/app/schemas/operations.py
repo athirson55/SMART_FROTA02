@@ -93,6 +93,34 @@ class AlertUpdate(BaseModel):
     observacao: str | None = None
 
 
+class RouteBase(BaseModel):
+    veiculoId: str = Field(min_length=1)
+    motoristaId: str | None = None
+    origem: str = Field(min_length=2, max_length=200)
+    destino: str = Field(min_length=2, max_length=200)
+    status: str = Field(default="PENDENTE", max_length=40)
+    dataInicio: datetime | None = None
+    dataFim: datetime | None = None
+    distanciaKm: float | None = None
+    observacoes: str | None = None
+
+
+class RouteCreate(RouteBase):
+    pass
+
+
+class RouteUpdate(BaseModel):
+    veiculoId: str | None = None
+    motoristaId: str | None = None
+    origem: str | None = Field(default=None, min_length=2, max_length=200)
+    destino: str | None = Field(default=None, min_length=2, max_length=200)
+    status: str | None = Field(default=None, max_length=40)
+    dataInicio: datetime | None = None
+    dataFim: datetime | None = None
+    distanciaKm: float | None = None
+    observacoes: str | None = None
+
+
 class NotificationBase(BaseModel):
     titulo: str = Field(min_length=2, max_length=160)
     mensagem: str = Field(min_length=2)

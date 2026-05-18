@@ -7,6 +7,26 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 
+class Route(Base):
+    __tablename__ = "rotas"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    vehicle_id: Mapped[str] = mapped_column(String(36), ForeignKey("veiculos.id", ondelete="CASCADE"), nullable=False, index=True)
+    motorista_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("motoristas.id", ondelete="SET NULL"), nullable=True)
+    origem: Mapped[str] = mapped_column(String(200), nullable=False)
+    destino: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(String(40), nullable=False, default="PENDENTE")
+    data_inicio: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    data_fim: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    distancia_km: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    vehicle = relationship("Vehicle", back_populates="rotas")
+    motorista = relationship("Driver")
+
+
 class Maintenance(Base):
     __tablename__ = "manutencoes"
 

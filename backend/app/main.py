@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.database.init_db import seed_database
 from app.database.session import SessionLocal, create_tables
 from app.middlewares.rate_limit import SimpleRateLimitMiddleware
-from app.routes import alerts, appointments, auth, drivers, health, maintenances, notifications, reports, settings as settings_routes, users, vehicles
+from app.routes import alerts, appointments, auth, drivers, health, maintenances, notifications, reports, routes_route, settings as settings_routes, users, vehicles
 import re
 import os
 
@@ -117,3 +117,4 @@ app.include_router(alerts.router)
 app.include_router(notifications.router)
 app.include_router(settings_routes.router)
 app.include_router(reports.router)
+app.include_router(routes_route.router)

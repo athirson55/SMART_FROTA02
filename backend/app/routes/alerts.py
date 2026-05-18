@@ -13,6 +13,7 @@ from app.services.operations_service import (
     list_alerts,
     resolve_alert,
     serialize_alert,
+    unresolve_alert,
     update_alert,
 )
 
@@ -51,6 +52,13 @@ def resolve_alert_route(alert_id: str, payload: dict = Body(default={}), db: Ses
     observacao = payload.get("observacao")
     item = resolve_alert(db, item, observacao=observacao)
     return success_response("Alerta resolvido com sucesso", serialize_alert(item))
+
+
+@router.patch("/{alert_id}/reabrir")
+def unresolve_alert_route(alert_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    item = get_alert(db, alert_id)
+    item = unresolve_alert(db, item)
+    return success_response("Alerta reaberto com sucesso", serialize_alert(item))
 
 
 @router.post("/gerar-automaticos")

@@ -6,9 +6,96 @@ import { AppHeader } from "../components/AppHeader";
 import { AppLayout } from "../components/AppLayout";
 import { EmptyState } from "../components/ui/EmptyState";
 import { getVehicles, deleteVehicle } from "../services/vehicles";
+import { getRoutes } from "../services/routes";
 import { getDrivers } from "../services/drivers";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovoVeiculoModal } from "../components/NovoVeiculoModal";
+
+function TrackingModal({ vehicle, onClose }) {
+  const [activeRoute, setActiveRoute] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!vehicle) return;
+    setLoading(true);
+    getRoutes({ veiculoId: vehicle.id, status: "EM_ANDAMENTO", limit: 1 })
+      .then((res) => {
+        const routes = res.data?.data ?? [];
+        setActiveRoute(routes[0] ?? null);
+      })
+      .catch(() => setActiveRoute(null))
+      .finally(() => setLoading(false));
+  }, [vehicle]);
+
+  if (!vehicle) return null;
+
+  const statusColor =
+    vehicle.status === "Em rota" ? "#2563EB" :
+    vehicle.status === "Em manutenção" ? "#DC2626" : "#16A34A";
+
+  return (
+    <div className="drawer-overlay open" onClick={onClose}>
+      <div className="drawer" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+        <div className="drawer-header">
+          <div className="drawer-icon" style={{ background: "#EFF6FF" }}>
+            <svg viewBox="0 0 24 24" style={{ fill: "#2563EB", width: 22, height: 22 }}>
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+            </svg>
+          </div>
+          <div className="drawer-head-text">
+            <div className="drawer-htitle">Rastreamento — {vehicle.model}</div>
+            <div className="drawer-hsub">{vehicle.plate}</div>
+          </div>
+          <button className="drawer-close" type="button" onClick={onClose}>×</button>
+        </div>
+
+        <div className="drawer-body">
+          <div style={{ background: "#F1F5F9", borderRadius: 12, padding: "32px 24px", textAlign: "center", marginBottom: 16, position: "relative", overflow: "hidden" }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>📍</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#1E293B" }}>{vehicle.model}</div>
+            <div style={{ fontSize: 13, color: "#64748B", marginBottom: 12 }}>{vehicle.plate}</div>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 600, color: statusColor, border: `1.5px solid ${statusColor}` }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor, display: "inline-block" }} />
+              {vehicle.status}
+            </div>
+            <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 10 }}>GPS simulado — integração disponível via API</div>
+          </div>
+
+          <section className="drawer-section">
+            <div className="drawer-section-title">Informações do veículo</div>
+            <div className="drawer-row"><div className="drawer-label">Motorista</div><div className="drawer-value">{vehicle.driver}</div></div>
+            <div className="drawer-row"><div className="drawer-label">Km atual</div><div className="drawer-value mono">{(vehicle.km ?? 0).toLocaleString("pt-BR")} km</div></div>
+            <div className="drawer-row">
+              <div className="drawer-label">Status</div>
+              <div className="drawer-value" style={{ color: statusColor, fontWeight: 600 }}>{vehicle.status}</div>
+            </div>
+          </section>
+
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 16, color: "#64748B", fontSize: 13 }}>Carregando rota ativa...</div>
+          ) : activeRoute ? (
+            <section className="drawer-section">
+              <div className="drawer-section-title">Rota em andamento</div>
+              <div className="drawer-row"><div className="drawer-label">Origem</div><div className="drawer-value">{activeRoute.origem}</div></div>
+              <div className="drawer-row"><div className="drawer-label">Destino</div><div className="drawer-value">{activeRoute.destino}</div></div>
+              {activeRoute.distanciaKm != null && (
+                <div className="drawer-row"><div className="drawer-label">Distância</div><div className="drawer-value mono">{Number(activeRoute.distanciaKm).toLocaleString("pt-BR")} km</div></div>
+              )}
+            </section>
+          ) : (
+            <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "#64748B", textAlign: "center" }}>
+              Nenhuma rota em andamento para este veículo.
+            </div>
+          )}
+        </div>
+
+        <div className="drawer-footer">
+          <button className="btn-full ghost" type="button" onClick={onClose}>Fechar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 function normalizeVehicle(vehicle) {
@@ -78,6 +165,7 @@ export function VehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
+  const [trackingVehicle, setTrackingVehicle] = useState(null);
   const [motoristas, setMotoristas] = useState([]);
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [query, setQuery] = useState(() => searchParams.get("search") ?? "");
@@ -362,6 +450,18 @@ export function VehiclesPage() {
                     <button
                       type="button"
                       className="fg-vehicle-action-btn"
+                      aria-label={`Rastrear ${vehicle.plate}`}
+                      title="Rastrear veículo"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setTrackingVehicle(vehicle);
+                      }}
+                    >
+                      <AppIcon type="pin" />
+                    </button>
+                    <button
+                      type="button"
+                      className="fg-vehicle-action-btn"
                       aria-label={`Editar ${vehicle.plate}`}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -448,6 +548,10 @@ export function VehiclesPage() {
         title={editingVehicle ? "Editar Veículo" : "Cadastro de Veículo"}
         submitLabel={editingVehicle ? "Salvar alterações" : "Cadastrar Veículo"}
       />
+
+      {trackingVehicle && (
+        <TrackingModal vehicle={trackingVehicle} onClose={() => setTrackingVehicle(null)} />
+      )}
     </AppLayout>
   );
 }

@@ -1,0 +1,118 @@
+﻿{
+    "value":  [
+                  {
+                      "cursor":  "iZRiUnR2CDdtNXY3Zjd2czczZDR2OXIw",
+                      "service":  {
+                                      "autoDeploy":  "yes",
+                                      "autoDeployTrigger":  "commit",
+                                      "branch":  "main",
+                                      "createdAt":  "2026-05-11T10:10:32.275329Z",
+                                      "dashboardUrl":  "https://dashboard.render.com/web/srv-d80qm5v7f7vs73d4v9r0",
+                                      "id":  "srv-d80qm5v7f7vs73d4v9r0",
+                                      "name":  "SMART_FROTA02-1",
+                                      "notifyOnFail":  "default",
+                                      "ownerId":  "tea-d7vocq1o3t8c73d5aei0",
+                                      "repo":  "https://github.com/athirson55/SMART_FROTA02",
+                                      "rootDir":  "backend",
+                                      "serviceDetails":  {
+                                                             "buildPlan":  "starter",
+                                                             "cache":  {
+                                                                           "profile":  "no-cache"
+                                                                       },
+                                                             "env":  "python",
+                                                             "envSpecificDetails":  {
+                                                                                        "buildCommand":  "pip install -r requirements.txt",
+                                                                                        "startCommand":  "python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+                                                                                    },
+                                                             "healthCheckPath":  "",
+                                                             "ipAllowList":  [
+                                                                                 {
+                                                                                     "cidrBlock":  "0.0.0.0/0",
+                                                                                     "description":  "everywhere"
+                                                                                 }
+                                                                             ],
+                                                             "maintenanceMode":  {
+                                                                                     "enabled":  false,
+                                                                                     "uri":  ""
+                                                                                 },
+                                                             "numInstances":  1,
+                                                             "openPorts":  null,
+                                                             "plan":  "free",
+                                                             "previews":  {
+                                                                              "generation":  "off"
+                                                                          },
+                                                             "pullRequestPreviewsEnabled":  "no",
+                                                             "region":  "ohio",
+                                                             "runtime":  "python",
+                                                             "sshAddress":  "srv-d80qm5v7f7vs73d4v9r0@ssh.ohio.render.com",
+                                                             "url":  "https://smart-frota02-1.onrender.com"
+                                                         },
+                                      "slug":  "smart-frota02-1",
+                                      "suspended":  "not_suspended",
+                                      "suspenders":  [
+
+                                                     ],
+                                      "type":  "web_service",
+                                      "updatedAt":  "2026-05-12T02:51:48.668313Z"
+                                  }
+                  },
+                  {
+                      "cursor":  "iZRiUnR2CDdkbXY3Zjd2czczZDRvMmww",
+                      "service":  {
+                                      "autoDeploy":  "yes",
+                                      "autoDeployTrigger":  "commit",
+                                      "branch":  "main",
+                                      "createdAt":  "2026-05-11T09:52:27.468275Z",
+                                      "dashboardUrl":  "https://dashboard.render.com/web/srv-d80qdmv7f7vs73d4o2l0",
+                                      "environmentId":  "evm-d80qdmn7f7vs73d4o2j0",
+                                      "id":  "srv-d80qdmv7f7vs73d4o2l0",
+                                      "name":  "SMART_FROTA02",
+                                      "notifyOnFail":  "default",
+                                      "ownerId":  "tea-d7vocq1o3t8c73d5aei0",
+                                      "repo":  "https://github.com/athirson55/SMART_FROTA02",
+                                      "rootDir":  "",
+                                      "serviceDetails":  {
+                                                             "buildPlan":  "starter",
+                                                             "cache":  {
+                                                                           "profile":  "no-cache"
+                                                                       },
+                                                             "env":  "node",
+                                                             "envSpecificDetails":  {
+                                                                                        "buildCommand":  "npm install; npm run build",
+                                                                                        "startCommand":  "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+                                                                                    },
+                                                             "healthCheckPath":  "",
+                                                             "ipAllowList":  [
+                                                                                 {
+                                                                                     "cidrBlock":  "0.0.0.0/0",
+                                                                                     "description":  "everywhere"
+                                                                                 }
+                                                                             ],
+                                                             "maintenanceMode":  {
+                                                                                     "enabled":  false,
+                                                                                     "uri":  ""
+                                                                                 },
+                                                             "numInstances":  1,
+                                                             "openPorts":  null,
+                                                             "plan":  "free",
+                                                             "previews":  {
+                                                                              "generation":  "off"
+                                                                          },
+                                                             "pullRequestPreviewsEnabled":  "no",
+                                                             "region":  "ohio",
+                                                             "runtime":  "node",
+                                                             "sshAddress":  "srv-d80qdmv7f7vs73d4o2l0@ssh.ohio.render.com",
+                                                             "url":  "https://smart-frota02.onrender.com"
+                                                         },
+                                      "slug":  "smart-frota02",
+                                      "suspended":  "not_suspended",
+                                      "suspenders":  [
+
+                                                     ],
+                                      "type":  "web_service",
+                                      "updatedAt":  "2026-05-11T09:52:27.468275Z"
+                                  }
+                  }
+              ],
+    "Count":  2
+}

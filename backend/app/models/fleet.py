@@ -54,6 +54,7 @@ class Vehicle(Base):
     manutencoes = relationship("Maintenance", back_populates="vehicle", cascade="all, delete-orphan")
     agendamentos = relationship("Appointment", back_populates="vehicle", cascade="all, delete-orphan")
     alertas = relationship("Alert", back_populates="vehicle", cascade="all, delete-orphan")
+    rotas = relationship("Route", back_populates="vehicle", cascade="all, delete-orphan")
 
 
 class VehiclePendencia(Base):
