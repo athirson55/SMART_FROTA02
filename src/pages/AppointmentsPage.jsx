@@ -224,6 +224,7 @@ export function AppointmentsPage() {
       <>
         <button
           type="button"
+          className="fg-appt-action-btn"
           aria-label="Editar agendamento"
           onClick={() => abrirEdicao(item)}
         >
@@ -231,6 +232,7 @@ export function AppointmentsPage() {
         </button>
         <button
           type="button"
+          className="fg-appt-action-btn is-danger"
           aria-label="Remover agendamento"
           onClick={() => handleDeleteAppointment(item.id)}
         >
@@ -524,7 +526,11 @@ export function AppointmentsPage() {
                             </span>
                           </td>
                           <td>{item.owner}</td>
-                          <td>{renderActions(item)}</td>
+                          <td>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {renderActions(item)}
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -378,7 +378,7 @@ export function VehiclesPage() {
 
             <button
               type="button"
-              className="fg-home-filter-btn"
+              className="fg-ui-button"
               onClick={() => {
                 showInfo("Abrindo agenda para manutenção");
                 navigate("/agendamentos");

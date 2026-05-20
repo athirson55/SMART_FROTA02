@@ -945,8 +945,12 @@
 
 .fg-home-summary-title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+}
+.fg-home-summary-title-row h4 {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 .fg-home-summary-icon {
   width: 36px;
@@ -1015,10 +1019,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 .fg-home-tag-list {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 .fg-home-tag-list span {
@@ -1692,19 +1698,19 @@
   margin-bottom: 16px;
 }
 .fg-vehicles-filter-bar button {
-  height: 30px;
+  height: 40px;
   border-radius: 9px;
+  border: 1px solid #d8dde6;
+  background: transparent;
+  color: #374151;
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
-  padding: 0 18px;
+  padding: 0 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  height: 40px;
   gap: 6px;
-  padding: 0 12px;
-  cursor: pointer;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
@@ -2993,6 +2999,39 @@
   display: none;
   gap: 12px;
 } /* hidden on desktop */
+
+.fg-appt-action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid #d8dde6;
+  background: #f8fafc;
+  color: #5f6d7e;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.fg-appt-action-btn:hover {
+  background: #eef3fb;
+  border-color: #bec9dc;
+  color: #374151;
+}
+.fg-appt-action-btn.is-danger {
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fff5f5;
+}
+.fg-appt-action-btn.is-danger:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
 
 .fg-appt-toolbar {
   display: flex;

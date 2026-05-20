@@ -441,13 +441,11 @@ export function DashboardPage() {
 
           <div className="fg-dashboard-quick-actions">
             <AppButton
-              className="fg-home-filter-btn"
               onClick={() => navigate("/alertas")}
             >
               Ver alertas
             </AppButton>
             <AppButton
-              className="fg-home-filter-btn"
               onClick={() => {
                 showInfo("Abrindo agenda de manutenção");
                 navigate("/agendamentos");
