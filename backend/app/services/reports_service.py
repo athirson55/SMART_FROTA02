@@ -156,20 +156,34 @@ def complete_report(db: Session, dias: int = 30, veiculo_id: str | None = None) 
 
     total_cost = float(db.scalar(select(func.sum(Maintenance.custo)).where(*filters)) or 0)
     maintenance_count = db.scalar(select(func.count(Maintenance.id)).where(*filters)) or 0
-    active_vehicles = db.scalar(select(func.count()).select_from(Vehicle).where(Vehicle.status == "ATIVO")) or 0
-    open_alerts = db.scalar(select(func.count()).select_from(Alert).where(Alert.status != "RESOLVIDO")) or 0
+
+    # Apply vehicle filter to KPIs
+    vehicle_filters = [Vehicle.status == "ATIVO"]
+    alert_filters = [Alert.status != "RESOLVIDO"]
+    if veiculo_id:
+        vehicle_filters.append(Vehicle.id == veiculo_id)
+        alert_filters.append(Alert.vehicle_id == veiculo_id)
+
+    active_vehicles = db.scalar(select(func.count()).select_from(Vehicle).where(*vehicle_filters)) or 0
+    open_alerts = db.scalar(select(func.count()).select_from(Alert).where(*alert_filters)) or 0
 
     # Previous period for delta
     prev_start = start - timedelta(days=dias)
-    prev_cost = float(db.scalar(select(func.sum(Maintenance.custo)).where(Maintenance.data >= prev_start, Maintenance.data < start)) or 0)
-    prev_count = db.scalar(select(func.count(Maintenance.id)).where(Maintenance.data >= prev_start, Maintenance.data < start)) or 0
+    prev_filters = [Maintenance.data >= prev_start, Maintenance.data < start]
+    if veiculo_id:
+        prev_filters.append(Maintenance.vehicle_id == veiculo_id)
+    prev_cost = float(db.scalar(select(func.sum(Maintenance.custo)).where(*prev_filters)) or 0)
+    prev_count = db.scalar(select(func.count(Maintenance.id)).where(*prev_filters)) or 0
 
     # Monthly costs — last 12 months
     monthly_costs = []
     for i in range(11, -1, -1):
         m_start = (now.replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(days=i * 28)).replace(day=1)
         m_end = (m_start + timedelta(days=32)).replace(day=1)
-        cost = float(db.scalar(select(func.sum(Maintenance.custo)).where(Maintenance.data >= m_start, Maintenance.data < m_end)) or 0)
+        monthly_filters = [Maintenance.data >= m_start, Maintenance.data < m_end]
+        if veiculo_id:
+            monthly_filters.append(Maintenance.vehicle_id == veiculo_id)
+        cost = float(db.scalar(select(func.sum(Maintenance.custo)).where(*monthly_filters)) or 0)
         monthly_costs.append({"month": _MONTH_LABELS_PT[m_start.month - 1], "year": m_start.year, "cost": cost})
 
     # Maintenance by type
@@ -208,7 +222,10 @@ def complete_report(db: Session, dias: int = 30, veiculo_id: str | None = None) 
         })
 
     # Fleet status
-    status_rows = db.execute(select(Vehicle.status, func.count(Vehicle.id).label("cnt")).group_by(Vehicle.status)).all()
+    status_query = select(Vehicle.status, func.count(Vehicle.id).label("cnt")).group_by(Vehicle.status)
+    if veiculo_id:
+        status_query = status_query.where(Vehicle.id == veiculo_id)
+    status_rows = db.execute(status_query).all()
     fleet_status = [
         {"label": _STATUS_LABELS.get(r.status, r.status), "value": r.cnt, "color": _STATUS_COLORS.get(r.status, "#7B8CA0")}
         for r in status_rows if r.cnt > 0
