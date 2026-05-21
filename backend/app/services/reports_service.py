@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.fleet import Driver, Vehicle, VehiclePendencia
 from app.models.operations import Alert, Appointment, Maintenance
-from app.models.report import ReportSnapshot
 from app.services.fleet_service import serialize_vehicle
 from app.services.operations_service import serialize_alert
 
@@ -13,19 +12,6 @@ _MONTH_LABELS_PT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set
 _STATUS_LABELS = {"ATIVO": "Disponíveis", "EM_ROTA": "Em rota", "MANUTENCAO": "Manutenção", "INATIVO": "Inativos"}
 _STATUS_COLORS = {"ATIVO": "#16A34A", "EM_ROTA": "#2563EB", "MANUTENCAO": "#DC2626", "INATIVO": "#7B8CA0"}
 _TYPE_COLORS = {"PREVENTIVA": "#2563EB", "CORRETIVA": "#DC2626", "REVISAO": "#16A34A", "EMERGENCIAL": "#D97706"}
-
-
-def _persist_snapshot(db: Session, report_type: str, params: dict, payload: dict, created_by: str | None = None):
-    snapshot = ReportSnapshot(
-        report_type=report_type,
-        params_json=str(params) if params else None,
-        payload_json=str(payload) if payload else None,
-        created_by=created_by,
-    )
-    db.add(snapshot)
-    db.commit()
-    db.refresh(snapshot)
-    return snapshot
 
 
 def dashboard_report(db: Session):
@@ -124,7 +110,6 @@ def dashboard_report(db: Session):
         "veiculosComPendencias": veiculos_com_pendencias,
         "generatedAt": now,
     }
-    _persist_snapshot(db, "dashboard", {}, payload)
     return payload
 
 
@@ -142,7 +127,6 @@ def fleet_report(db: Session, search: str | None = None):
             "pendencias": [{"slug": p.slug, "label": p.label, "detail": p.detail, "tone": p.tone} for p in pendencias],
         })
     payload = {"generatedAt": datetime.now(timezone.utc), "items": items, "summary": {"total": len(items)}}
-    _persist_snapshot(db, "fleet", {"search": search}, payload)
     return payload
 
 
@@ -421,5 +405,4 @@ def costs_report(db: Session, search: str | None = None):
             "prioridade": maintenance.prioridade,
         })
     payload = {"generatedAt": datetime.now(timezone.utc), "items": items, "summary": {"total": total, "count": len(items)}}
-    _persist_snapshot(db, "costs", {"search": search}, payload)
     return payload
