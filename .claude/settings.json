@@ -12,7 +12,12 @@
       "Bash(powershell -Command \"\\(Get-Content 'src\\\\styles\\\\dashboard.css' -Raw\\) -replace '\\(?<!--sf-primary: \\)\\(?<!--sf-text-active: \\)#2f67d8', 'var\\(--sf-primary\\)' | Set-Content 'src\\\\styles\\\\dashboard.css' -Encoding UTF8\")",
       "Bash(powershell -Command \"\\(Get-Content 'src\\\\styles\\\\dashboard.css' -Raw\\) -replace '\\(?<!\\(--sf-bg-active: |--sf-primary-light: \\)\\)#e8f1ff', 'var\\(--sf-primary-light\\)' | Set-Content 'src\\\\styles\\\\dashboard.css' -Encoding UTF8\")",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(curl -s \"http://localhost:5175\")",
+      "Bash(node -e ' *)",
+      "Bash(git restore *)",
+      "Bash(cat vite.config.js)",
+      "Bash(cat vite.config.ts)"
     ]
   }
 }
