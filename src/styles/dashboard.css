@@ -3461,8 +3461,9 @@
 [data-density="compacto"] .fg-home-list-card .fg-home-list-head { min-height: 42px; }
 [data-density="compacto"] .fg-home-row { padding: 7px 0; }
 
-   RESPONSIVE â€” consolidated (no duplicates)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* =======================================================================
+   RESPONSIVE - consolidated (no duplicates)
+======================================================================= */
 
 /* 1320px â€” sidebar shrinks, grids collapse to 2-col */
 @media (max-width: 1320px) {
