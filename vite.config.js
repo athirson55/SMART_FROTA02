@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => ({
         main: resolve(currentDir, "index.html"),
       },
       output: {
-        entryFileNames: "assets/app.js",
+        entryFileNames: "assets/app.[hash].js",
         chunkFileNames: "assets/chunks/[name]-[hash].js",
-        assetFileNames: "assets/[name][extname]",
+        assetFileNames: "assets/[name].[hash][extname]",
       },
     },
   },
