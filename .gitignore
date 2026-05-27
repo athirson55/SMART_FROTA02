@@ -4,6 +4,7 @@ node_modules
 *.log
 .env
 .env.local
+dist/
 
 # Python
 __pycache__/

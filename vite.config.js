@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: mode === "production" ? "/SMART_FROTA02/" : "/",
   build: {
+    outDir: "docs",
     rollupOptions: {
       input: {
         main: resolve(currentDir, "index.html"),
