@@ -1,12 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap");
 
 /* ══════════════════════════════════════════
    CSS CUSTOM PROPERTIES
 ══════════════════════════════════════════ */
 .fg-settings-page {
-  --s-blue: #2563eb;
-  --s-blue-light: #eff6ff;
-  --s-blue-mid: #bfdbfe;
+  --s-blue: var(--sf-primary);
+  --s-blue-light: var(--sf-primary-light);
+  --s-blue-mid: var(--sf-primary-light);
   --s-bg: #f5f7fb;
   --s-surface: #ffffff;
   --s-border: #e5e9f2;
@@ -384,7 +383,7 @@
 .fg-settings-field select:focus {
   border-color: var(--s-blue);
   background: var(--s-surface);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px var(--sf-bg-active);
 }
 .fg-settings-field input.is-mono {
   font-family: "DM Mono", monospace;
@@ -542,7 +541,7 @@
 }
 .fg-settings-primary-btn:hover {
   filter: brightness(0.96);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 4px 12px var(--sf-primary-shadow);
 }
 .fg-settings-primary-btn:active {
   filter: brightness(0.92);

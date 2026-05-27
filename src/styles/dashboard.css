@@ -1,5 +1,4 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-
+﻿
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    CSS CUSTOM PROPERTIES (THEME TOKENS)
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
@@ -25,6 +24,7 @@
   --sf-shadow-dropdown: 0 8px 24px rgba(0,0,0,0.12);
   --sf-primary: #2f67d8;
   --sf-primary-light: #e8f1ff;
+  --sf-primary-shadow: rgba(47, 103, 216, 0.25);
 }
 
 :root.dark {
@@ -83,13 +83,22 @@
   align-items: stretch;
   padding: 12px 10px 10px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   transition:
     width 0.22s ease,
-    padding 0.22s ease;
+    padding 0.22s ease,
+    box-shadow 0.22s ease;
 }
 .fg-home-sidebar.is-collapsed {
   width: 56px;
   padding: 12px 8px 10px;
+}
+
+/* Desktop hover: sidebar expands over content with shadow */
+@media (min-width: 901px) {
+  .fg-home-sidebar:not(.is-collapsed) {
+    box-shadow: 4px 0 24px rgba(15, 23, 42, 0.10);
+  }
 }
 .fg-home-sidebar-top {
   display: flex;
@@ -267,7 +276,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 100vh;
-  margin-left: 208px;
+  margin-left: 56px;
   overflow-y: auto;
   transition: margin-left 0.22s ease;
   padding-bottom: 28px;
@@ -1017,39 +1026,46 @@
   border-top: 1px solid #eceff4;
   padding-top: 9px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 6px 10px;
+  gap: 6px 8px;
+  min-height: 28px;
 }
 .fg-home-tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .fg-home-tag-list span {
   height: 22px;
   border-radius: 999px;
-  padding: 0 10px;
+  padding: 0 9px;
   display: inline-flex;
   align-items: center;
-  font-size: 9px;
+  font-size: 10px;
+  white-space: nowrap;
   color: #c35f5f;
   background: #fae5e5;
 }
-.fg-home-summary-footer button {
+.fg-home-summary-footer button,
+.fg-home-summary-footer .fg-interactive-action {
   border: 0;
   background: transparent;
   color: var(--sf-primary);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 6px;
+  flex-shrink: 0;
   transition: background-color 0.15s ease;
 }
-.fg-home-summary-footer button:hover {
+.fg-home-summary-footer button:hover,
+.fg-home-summary-footer .fg-interactive-action:hover {
   background: var(--sf-primary-light);
 }
 
@@ -1413,9 +1429,11 @@
   border-radius: 999px;
   background: #fff;
   color: #6b7280;
-  padding: 0 12px;
+  padding: 0 14px;
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
   transition:
     border-color 0.16s ease,
@@ -1698,19 +1716,21 @@
   margin-bottom: 16px;
 }
 .fg-vehicles-filter-bar button {
-  height: 40px;
+  height: 36px;
   border-radius: 9px;
   border: 1px solid #d8dde6;
   background: transparent;
   color: #374151;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 0 12px;
+  padding: 0 14px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition:
     border-color 0.15s ease,
     background-color 0.15s ease,
@@ -1745,10 +1765,10 @@
 }
 .fg-vehicle-card {
   background: #fff;
-  border: 1px solid #d8dde6;
+  border: 1px solid #e8ecf3;
   border-radius: 12px;
   padding: 14px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -1780,8 +1800,8 @@
 }
 .fg-vehicle-card:hover {
   transform: translateY(-2px);
-  border-color: #c3d0e4;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  border-color: #d0daea;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
 }
 .fg-vehicle-card:focus-visible {
   outline: 2px solid rgba(47, 103, 216, 0.45);
@@ -3003,34 +3023,43 @@
 .fg-appt-action-btn {
   width: 30px;
   height: 30px;
-  border-radius: 7px;
-  border: 1px solid #d8dde6;
-  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e5e9f2;
+  background: #f7f9fd;
   color: #5f6d7e;
-  font-size: 15px;
+  font-size: 16px;
+  font-family: inherit;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 .fg-appt-action-btn:hover {
-  background: #eef3fb;
-  border-color: #bec9dc;
-  color: #374151;
+  background: #e8f0fd;
+  border-color: #b8cef5;
+  color: var(--sf-primary);
+  transform: translateY(-1px);
+}
+.fg-appt-action-btn:active {
+  transform: translateY(0);
 }
 .fg-appt-action-btn.is-danger {
   color: #dc2626;
-  border-color: #fca5a5;
+  border-color: #fecaca;
   background: #fff5f5;
 }
 .fg-appt-action-btn.is-danger:hover {
   background: #fee2e2;
   border-color: #f87171;
+  color: #b91c1c;
+  transform: translateY(-1px);
 }
 
 .fg-appt-toolbar {
@@ -3416,6 +3445,22 @@
 }
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+/* Density - compact mode ([data-density="compacto"] on html element) */
+[data-density="compacto"] .fg-home-content { padding: 14px 16px; }
+[data-density="compacto"] .fg-home-summary-grid,
+[data-density="compacto"] .fg-home-actions-grid { gap: 14px; }
+[data-density="compacto"] .fg-home-summary-card { padding: 13px; min-height: 126px; }
+[data-density="compacto"] .fg-home-summary-card p { min-height: unset; margin: 6px 0 5px; }
+[data-density="compacto"] .fg-home-section-head { margin-top: 14px; margin-bottom: 8px; }
+[data-density="compacto"] .fg-home-nav-item,
+[data-density="compacto"] .fg-sidebar-item { min-height: 32px; }
+[data-density="compacto"] .fg-vehicle-card { padding: 10px; gap: 8px; }
+[data-density="compacto"] .fg-appt-kpi-card { padding: 10px 12px; }
+[data-density="compacto"] .fg-appt-kpi-strip { gap: 10px; }
+[data-density="compacto"] .fg-home-list-card .fg-home-list-head { min-height: 42px; }
+[data-density="compacto"] .fg-home-row { padding: 7px 0; }
+
    RESPONSIVE â€” consolidated (no duplicates)
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -3428,7 +3473,7 @@
     width: 56px;
   }
   .fg-home-main {
-    margin-left: 196px;
+    margin-left: 56px;
   }
   .fg-home-shell.is-collapsed .fg-home-main {
     margin-left: 56px;
@@ -4618,9 +4663,9 @@
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  border: 1px solid #d8dde6;
+  border: 1px solid #e8ecf3;
   background: #f8fafc;
-  color: #7b8794;
+  color: #8b97a8;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -4901,3 +4946,157 @@ textarea:focus {
 :root.dark ::-webkit-scrollbar-thumb:hover { background: var(--sf-text-muted); }
 
 
+
+/* ════════════════════════════════════════
+   SF-DRAWER — shared drawer/panel component
+   Uses --sf-* tokens; safe to use in any page.
+   (alerts-page uses its own scoped .drawer-overlay)
+════════════════════════════════════════ */
+.sf-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 42, 59, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 300;
+  transition: opacity 0.2s;
+}
+.sf-drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sf-drawer-overlay .sf-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(440px, 96vw);
+  background: var(--sf-bg-surface);
+  box-shadow: -4px 0 24px rgba(15, 23, 42, 0.14);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sf-drawer-overlay.open .sf-drawer {
+  transform: translateX(0);
+}
+.sf-drawer-overlay .sf-drawer-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--sf-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.sf-drawer-overlay .sf-drawer-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.sf-drawer-overlay .sf-drawer-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.sf-drawer-overlay .sf-drawer-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.sf-drawer-overlay .sf-drawer-htitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--sf-text-primary);
+}
+.sf-drawer-overlay .sf-drawer-hsub {
+  font-size: 11px;
+  color: var(--sf-text-muted);
+}
+.sf-drawer-overlay .sf-drawer-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--sf-border);
+  background: var(--sf-bg-input);
+  color: var(--sf-text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sf-drawer-overlay .sf-drawer-close:hover {
+  background: var(--sf-bg-hover);
+  color: var(--sf-text-primary);
+}
+.sf-drawer-overlay .sf-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sf-drawer-overlay .sf-drawer-section {
+  background: var(--sf-bg-input);
+  border: 1px solid var(--sf-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.sf-drawer-overlay .sf-drawer-section-title {
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sf-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--sf-bg-surface);
+}
+.sf-drawer-overlay .sf-drawer-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--sf-border);
+}
+.sf-drawer-overlay .sf-drawer-row:last-child {
+  border-bottom: none;
+}
+.sf-drawer-overlay .sf-drawer-label {
+  font-size: 12px;
+  color: var(--sf-text-muted);
+  width: 130px;
+  flex-shrink: 0;
+}
+.sf-drawer-overlay .sf-drawer-value {
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  line-height: 1.5;
+  color: var(--sf-text-primary);
+}
+.sf-drawer-overlay .sf-drawer-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--sf-border);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.sf-drawer-overlay .sf-btn-full {
+  flex: 1;
+  height: 36px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--sf-border);
+  background: var(--sf-bg-input);
+  color: var(--sf-text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sf-drawer-overlay .sf-btn-full:hover {
+  background: var(--sf-bg-hover);
+  color: var(--sf-text-primary);
+}

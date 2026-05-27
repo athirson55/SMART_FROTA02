@@ -80,6 +80,7 @@ function applyAccentColor(color) {
   root.style.setProperty("--sf-text-active", color);
   root.style.setProperty("--sf-primary-light", hexToRgba(color, 0.12));
   root.style.setProperty("--sf-bg-active", hexToRgba(color, 0.1));
+  root.style.setProperty("--sf-primary-shadow", hexToRgba(color, 0.25));
 }
 
 function strengthFromPassword(password) {
@@ -189,7 +190,9 @@ export function SettingsPage() {
   const [dailySummary, setDailySummary] = useState(false);
 
   const [themeMode, setThemeMode] = useState(theme);
-  const [densityMode, setDensityMode] = useState("padrao");
+  const [densityMode, setDensityMode] = useState(
+    () => localStorage.getItem("smart-frota-density") || "padrao",
+  );
   const [accentColor, setAccentColor] = useState(() => {
     return localStorage.getItem("smart-frota-accent") || "#2f67d8";
   });
@@ -227,6 +230,11 @@ export function SettingsPage() {
   useEffect(() => {
     applyAccentColor(accentColor);
   }, [accentColor]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-density", densityMode);
+    localStorage.setItem("smart-frota-density", densityMode);
+  }, [densityMode]);
 
   useEffect(() => {
     setAvatarFoto(user?.avatarFoto || "");

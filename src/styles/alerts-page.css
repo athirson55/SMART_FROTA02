@@ -1,9 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
 
 .fg-alerts-page {
-  --blue: #2563eb;
-  --blue-light: #eff6ff;
-  --blue-mid: #bfdbfe;
+  --blue: var(--sf-primary);
+  --blue-light: var(--sf-primary-light);
+  --blue-mid: var(--sf-primary-light);
   --bg: #f5f7fb;
   --surface: #ffffff;
   --border: #e5e9f2;
@@ -284,7 +283,7 @@
 
 .fg-alerts-page .search-area input:focus {
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+  box-shadow: 0 0 0 3px var(--sf-bg-active);
 }
 
 .fg-alerts-page .alert-list {
@@ -927,8 +926,8 @@
 ══════════════════════════════════════════ */
 :root.dark .fg-alerts-page {
   --blue: #6b9ef8;
-  --blue-light: rgba(107, 158, 248, 0.12);
-  --blue-mid: rgba(107, 158, 248, 0.25);
+  --blue-light: var(--sf-primary-light);
+  --blue-mid: var(--sf-primary-light);
   --bg: #0e1117;
   --surface: #1a1f2e;
   --border: #2d3748;

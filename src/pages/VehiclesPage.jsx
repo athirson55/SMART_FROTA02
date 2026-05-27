@@ -34,22 +34,22 @@ function TrackingModal({ vehicle, onClose }) {
     vehicle.status === "Em manutenção" ? "#DC2626" : "#16A34A";
 
   return (
-    <div className="drawer-overlay open" onClick={onClose}>
-      <div className="drawer" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
-        <div className="drawer-header">
-          <div className="drawer-icon" style={{ background: "#EFF6FF" }}>
+    <div className="sf-drawer-overlay open" onClick={onClose}>
+      <div className="sf-drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="sf-drawer-header">
+          <div className="sf-drawer-icon" style={{ background: "#EFF6FF" }}>
             <svg viewBox="0 0 24 24" style={{ fill: "#2563EB", width: 22, height: 22 }}>
               <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
             </svg>
           </div>
-          <div className="drawer-head-text">
-            <div className="drawer-htitle">Rastreamento — {vehicle.model}</div>
-            <div className="drawer-hsub">{vehicle.plate}</div>
+          <div className="sf-drawer-head-text">
+            <div className="sf-drawer-htitle">Rastreamento — {vehicle.model}</div>
+            <div className="sf-drawer-hsub">{vehicle.plate}</div>
           </div>
-          <button className="drawer-close" type="button" onClick={onClose}>×</button>
+          <button className="sf-drawer-close" type="button" onClick={onClose}>×</button>
         </div>
 
-        <div className="drawer-body">
+        <div className="sf-drawer-body">
           <div style={{ background: "#F1F5F9", borderRadius: 12, padding: "32px 24px", textAlign: "center", marginBottom: 16, position: "relative", overflow: "hidden" }}>
             <div style={{ fontSize: 48, marginBottom: 8 }}>📍</div>
             <div style={{ fontWeight: 700, fontSize: 15, color: "#1E293B" }}>{vehicle.model}</div>
@@ -61,25 +61,25 @@ function TrackingModal({ vehicle, onClose }) {
             <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 10 }}>GPS simulado — integração disponível via API</div>
           </div>
 
-          <section className="drawer-section">
-            <div className="drawer-section-title">Informações do veículo</div>
-            <div className="drawer-row"><div className="drawer-label">Motorista</div><div className="drawer-value">{vehicle.driver}</div></div>
-            <div className="drawer-row"><div className="drawer-label">Km atual</div><div className="drawer-value mono">{(vehicle.km ?? 0).toLocaleString("pt-BR")} km</div></div>
-            <div className="drawer-row">
-              <div className="drawer-label">Status</div>
-              <div className="drawer-value" style={{ color: statusColor, fontWeight: 600 }}>{vehicle.status}</div>
+          <section className="sf-drawer-section">
+            <div className="sf-drawer-section-title">Informações do veículo</div>
+            <div className="sf-drawer-row"><div className="sf-drawer-label">Motorista</div><div className="sf-drawer-value">{vehicle.driver}</div></div>
+            <div className="sf-drawer-row"><div className="sf-drawer-label">Km atual</div><div className="sf-drawer-value">{(vehicle.km ?? 0).toLocaleString("pt-BR")} km</div></div>
+            <div className="sf-drawer-row">
+              <div className="sf-drawer-label">Status</div>
+              <div className="sf-drawer-value" style={{ color: statusColor, fontWeight: 600 }}>{vehicle.status}</div>
             </div>
           </section>
 
           {loading ? (
             <div style={{ textAlign: "center", padding: 16, color: "#64748B", fontSize: 13 }}>Carregando rota ativa...</div>
           ) : activeRoute ? (
-            <section className="drawer-section">
-              <div className="drawer-section-title">Rota em andamento</div>
-              <div className="drawer-row"><div className="drawer-label">Origem</div><div className="drawer-value">{activeRoute.origem}</div></div>
-              <div className="drawer-row"><div className="drawer-label">Destino</div><div className="drawer-value">{activeRoute.destino}</div></div>
+            <section className="sf-drawer-section">
+              <div className="sf-drawer-section-title">Rota em andamento</div>
+              <div className="sf-drawer-row"><div className="sf-drawer-label">Origem</div><div className="sf-drawer-value">{activeRoute.origem}</div></div>
+              <div className="sf-drawer-row"><div className="sf-drawer-label">Destino</div><div className="sf-drawer-value">{activeRoute.destino}</div></div>
               {activeRoute.distanciaKm != null && (
-                <div className="drawer-row"><div className="drawer-label">Distância</div><div className="drawer-value mono">{Number(activeRoute.distanciaKm).toLocaleString("pt-BR")} km</div></div>
+                <div className="sf-drawer-row"><div className="sf-drawer-label">Distância</div><div className="sf-drawer-value">{Number(activeRoute.distanciaKm).toLocaleString("pt-BR")} km</div></div>
               )}
             </section>
           ) : (
@@ -89,8 +89,8 @@ function TrackingModal({ vehicle, onClose }) {
           )}
         </div>
 
-        <div className="drawer-footer">
-          <button className="btn-full ghost" type="button" onClick={onClose}>Fechar</button>
+        <div className="sf-drawer-footer">
+          <button className="sf-btn-full" type="button" onClick={onClose}>Fechar</button>
         </div>
       </div>
     </div>

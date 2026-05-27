@@ -14,6 +14,12 @@ if (savedTheme === "escuro") {
   document.documentElement.classList.add("dark");
 }
 
+// Apply saved density synchronously to avoid layout shift
+const savedDensity = localStorage.getItem("smart-frota-density");
+if (savedDensity) {
+  document.documentElement.setAttribute("data-density", savedDensity);
+}
+
 // Apply saved accent color synchronously to avoid flash
 const savedAccent = localStorage.getItem("smart-frota-accent");
 if (savedAccent) {
@@ -25,6 +31,7 @@ if (savedAccent) {
   root.style.setProperty("--sf-text-active", savedAccent);
   root.style.setProperty("--sf-primary-light", `rgba(${r},${g},${b},0.12)`);
   root.style.setProperty("--sf-bg-active", `rgba(${r},${g},${b},0.1)`);
+  root.style.setProperty("--sf-primary-shadow", `rgba(${r},${g},${b},0.25)`);
 }
 
 function App() {

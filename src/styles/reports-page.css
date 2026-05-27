@@ -1,12 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap");
 
 /* ══════════════════════════════════════════
    CSS CUSTOM PROPERTIES
 ══════════════════════════════════════════ */
 .fg-reports-page {
-  --r-blue:        #2563eb;
-  --r-blue-light:  #eff6ff;
-  --r-blue-mid:    #bfdbfe;
+  --r-blue:        var(--sf-primary);
+  --r-blue-light:  var(--sf-primary-light);
+  --r-blue-mid:    var(--sf-primary-light);
   --r-bg:          #f5f7fb;
   --r-surface:     #ffffff;
   --r-border:      #e5e9f2;
@@ -50,10 +49,10 @@
 .fg-reports-page .export-btn {
   height: 36px; padding: 0 18px; background: var(--r-blue); border: none; border-radius: 8px;
   color: #fff; font-size: 13px; font-weight: 500; cursor: pointer;
-  box-shadow: 0 2px 8px rgba(37,99,235,.25);
+  box-shadow: 0 2px 8px var(--sf-primary-shadow);
   transition: filter .15s ease, box-shadow .15s ease, transform .15s ease;
 }
-.fg-reports-page .export-btn:hover  { filter: brightness(.96); box-shadow: 0 4px 14px rgba(37,99,235,.35); }
+.fg-reports-page .export-btn:hover  { filter: brightness(.96); box-shadow: 0 4px 14px var(--sf-primary-shadow); }
 .fg-reports-page .export-btn:active { transform: translateY(1px); }
 .fg-reports-page .export-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 .fg-reports-page .export-btn-excel {
@@ -79,7 +78,7 @@
   min-width: 140px; outline: none; cursor: pointer;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
-.fg-reports-page .filter-select:focus { border-color: var(--r-blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.fg-reports-page .filter-select:focus { border-color: var(--r-blue); box-shadow: 0 0 0 3px var(--sf-bg-active); }
 .fg-reports-page .filter-divider { width: 1px; height: 36px; background: var(--r-border); }
 .fg-reports-page .filter-bar-right { margin-left: auto; display: flex; gap: 8px; }
 
@@ -101,7 +100,7 @@
   position: relative; overflow: hidden;
   transition: box-shadow .2s ease;
 }
-.fg-reports-page .insight-card:hover { box-shadow: 0 8px 24px rgba(37,99,235,.35); }
+.fg-reports-page .insight-card:hover { box-shadow: 0 8px 24px var(--sf-primary-shadow); }
 .fg-reports-page .insight-card::before {
   content: ""; position: absolute; right: -30px; top: -30px;
   width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.07);

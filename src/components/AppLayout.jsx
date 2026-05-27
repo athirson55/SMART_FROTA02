@@ -4,16 +4,17 @@ import { Sidebar } from "./Sidebar";
 
 export function AppLayout({ children }) {
   const isMobile = useIsMobile(900);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => !isMobile);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    setIsSidebarOpen(!isMobile);
+    if (!isMobile) setIsMobileOpen(false);
   }, [isMobile]);
 
   useEffect(() => {
     function handleOpenSidebar() {
       if (isMobile) {
-        setIsSidebarOpen(true);
+        setIsMobileOpen(true);
       }
     }
 
@@ -24,22 +25,27 @@ export function AppLayout({ children }) {
 
   function openDrawer() {
     if (isMobile) {
-      setIsSidebarOpen(true);
+      setIsMobileOpen(true);
     }
   }
 
   function closeDrawer() {
     if (isMobile) {
-      setIsSidebarOpen(false);
+      setIsMobileOpen(false);
     }
   }
+
+  // Desktop: shell always "is-collapsed" so content has 56px margin.
+  // Sidebar expands on hover as an overlay. Mobile: drawer behavior.
+  const shellIsCollapsed = !isMobile || !isMobileOpen;
+  const sidebarIsOpen = isMobile ? isMobileOpen : isHovered;
 
   return (
     <main className="fg-home-page">
       <div
-        className={`fg-home-shell ${isSidebarOpen ? "" : "is-collapsed"} ${isMobile ? "is-mobile" : ""}`}
+        className={`fg-home-shell ${shellIsCollapsed ? "is-collapsed" : ""} ${isMobile ? "is-mobile" : ""}`}
       >
-        {isMobile && isSidebarOpen ? (
+        {isMobile && isMobileOpen ? (
           <button
             type="button"
             className="fg-mobile-drawer-overlay"
@@ -49,14 +55,16 @@ export function AppLayout({ children }) {
         ) : null}
 
         <Sidebar
-          isOpen={isSidebarOpen}
+          isOpen={sidebarIsOpen}
           isMobile={isMobile}
           onClose={closeDrawer}
+          onMouseEnter={!isMobile ? () => setIsHovered(true) : undefined}
+          onMouseLeave={!isMobile ? () => setIsHovered(false) : undefined}
         />
 
         <section className="fg-home-main">
           {typeof children === "function"
-            ? children({ isMobile, isSidebarOpen, openDrawer, closeDrawer })
+            ? children({ isMobile, isSidebarOpen: sidebarIsOpen, openDrawer, closeDrawer })
             : children}
         </section>
       </div>
