@@ -8,6 +8,7 @@ export function SidebarItem({
   end = false,
   isCollapsed,
   onSelect,
+  badge,
 }) {
   return (
     <NavLink
@@ -24,8 +25,13 @@ export function SidebarItem({
           .join(" ")
       }
     >
-      <span className="fg-sidebar-item__icon">
+      <span className="fg-sidebar-item__icon" style={{ position: "relative" }}>
         <AppIcon type={icon} />
+        {badge ? (
+          <span className="fg-sidebar-item__badge">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        ) : null}
       </span>
       <span className="fg-sidebar-item__label">{label}</span>
     </NavLink>

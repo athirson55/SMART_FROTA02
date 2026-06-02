@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { AppIcon } from "./AppIcon";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationsContext";
 import { getVehicles } from "../services/vehicles";
-import { getAlerts } from "../services/alerts";
 
 function buildSearchPool(vehicles) {
   return vehicles.map((vehicle) => ({
@@ -130,11 +130,28 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
   const isMobileViewport = useIsMobile(900);
   const mobileMode = isMobile || isMobileViewport;
 
-  const [notifications, setNotifications] = useState([]);
-  const [readIds, setReadIds] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("sf-read-notifs") || "[]")); }
-    catch { return new Set(); }
-  });
+  const { notifications: rawNotifications, unreadCount, markAsRead, markAllRead, dismiss } = useNotifications();
+
+  // Map context notifications to the shape used by the dropdown
+  const notifications = useMemo(() =>
+    rawNotifications.map((n) => ({
+      id: n.id,
+      label: n.titulo,
+      detail: n.mensagem,
+      prioridade: n.prioridade || "MEDIA",
+      isRead: n.isRead,
+      route: (() => {
+        const t = n.referenciaTipo || "";
+        if (t === "cnh") return "/motoristas";
+        if (t === "crlv" || t === "seguro" || t === "revisao_km" || t === "revisao_data") return "/veiculos";
+        if (t === "manutencao") return "/manutencoes";
+        if (t === "agendamento") return "/agendamentos";
+        if (t === "rota") return "/rotas";
+        return "/notificacoes";
+      })(),
+    })),
+    [rawNotifications],
+  );
 
   useEffect(() => {
     let active = true;
@@ -167,35 +184,6 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
     };
   }, []);
 
-  useEffect(() => {
-    let active = true;
-
-    getAlerts({ limit: 5, status: "todos" })
-      .then((res) => {
-        if (!active) return;
-        const data = res.data?.data ?? [];
-        const notificationsFromApi = data
-          .filter(
-            (item) => String(item.status || "").toUpperCase() !== "RESOLVIDO",
-          )
-          .map((item) => ({
-            id: item.id,
-            vehicleId: item.veiculo ? `${item.veiculo.placa || ""}`.trim() : "",
-            label: item.titulo || item.mensagem || "Alerta",
-            detail: item.mensagem || item.observacao || "Sem detalhes",
-            route: "/alertas",
-          }));
-        setNotifications(notificationsFromApi);
-      })
-      .catch(() => {
-        if (active) setNotifications([]);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const searchMatches = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
@@ -207,17 +195,6 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
       .filter((item) => item.searchText.includes(query))
       .slice(0, 6);
   }, [searchPool, searchQuery]);
-
-  const unreadNotifications = useMemo(
-    () => notifications.filter((n) => !readIds.has(n.id)),
-    [notifications, readIds],
-  );
-
-  function markAllRead() {
-    const newIds = new Set([...readIds, ...notifications.map((n) => n.id)]);
-    setReadIds(newIds);
-    localStorage.setItem("sf-read-notifs", JSON.stringify([...newIds]));
-  }
 
   const closeHeaderMenus = useCallback(() => {
     setIsNotificationOpen(false);
@@ -397,52 +374,61 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
             title="Notificações"
             aria-expanded={isNotificationOpen}
             onClick={() => {
-              const opening = !isNotificationOpen;
-              setIsNotificationOpen(opening);
+              setIsNotificationOpen((v) => !v);
               setIsProfileOpen(false);
-              if (opening) markAllRead();
             }}
           >
             <AppIcon type="bell" />
-            {unreadNotifications.length > 0 ? (
+            {unreadCount > 0 ? (
               <span className="fg-home-icon-badge">
-                {unreadNotifications.length}
+                {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             ) : null}
           </button>
 
           {isNotificationOpen ? (
             <div className="fg-header-dropdown fg-header-notification-dropdown">
+              <div className="fg-notif-header">
+                <strong>Notificações</strong>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      className="fg-notif-mark-all"
+                      onClick={() => { markAllRead(); }}
+                    >
+                      Marcar lidas
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="fg-notif-mark-all"
+                    onClick={() => { navigate("/notificacoes"); setIsNotificationOpen(false); }}
+                  >
+                    Ver todas
+                  </button>
+                </div>
+              </div>
               {notifications.length > 0 ? (
-                <>
-                  <div className="fg-notif-header">
-                    <strong>Notificações</strong>
-                    {notifications.length > 0 && (
-                      <button
-                        type="button"
-                        className="fg-notif-mark-all"
-                        onClick={markAllRead}
-                      >
-                        Marcar todas como lidas
-                      </button>
-                    )}
-                  </div>
-                  {notifications.map((item) => (
+                notifications.map((item) => {
+                  const tone = item.prioridade === "CRITICA" ? "red" : item.prioridade === "ALTA" ? "gold" : "blue";
+                  return (
                     <div
                       key={item.id}
-                      className={`fg-header-dropdown-item fg-notif-wrapper ${readIds.has(item.id) ? "is-read" : "is-unread"}`}
+                      className={`fg-header-dropdown-item fg-notif-wrapper ${item.isRead ? "is-read" : "is-unread"}`}
                     >
                       <button
                         type="button"
                         className="fg-notif-content"
                         onClick={() => {
+                          markAsRead(item.id);
                           navigate(item.route);
                           setIsNotificationOpen(false);
                         }}
                       >
+                        <span className={`fg-notif-priority-dot is-${tone}`} />
                         <strong>{item.label}</strong>
                         <span>{item.detail}</span>
-                        {item.vehicleId ? <small>{item.vehicleId}</small> : null}
                       </button>
                       <button
                         type="button"
@@ -450,16 +436,14 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
                         aria-label="Descartar notificação"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setNotifications((prev) =>
-                            prev.filter((n) => n.id !== item.id),
-                          );
+                          dismiss(item.id);
                         }}
                       >
                         ×
                       </button>
                     </div>
-                  ))}
-                </>
+                  );
+                })
               ) : (
                 <div className="fg-header-dropdown-empty">
                   <span>Nenhuma notificação recente</span>

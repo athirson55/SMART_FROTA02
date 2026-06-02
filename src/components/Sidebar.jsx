@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { AppIcon } from "./AppIcon";
 import { SidebarItem } from "./SidebarItem";
 import { useAuth } from "../context/AuthContext";
+import { useNotifications } from "../context/NotificationsContext";
 
 const sidebarItems = [
   { key: "home", label: "Home", icon: "home", to: "/home", end: true },
@@ -33,6 +34,7 @@ const sidebarItems = [
   },
   { key: "rotas", label: "Rotas", icon: "pin", to: "/rotas" },
   { key: "alertas", label: "Alertas", icon: "bell", to: "/alertas" },
+  { key: "notificacoes", label: "Notificações", icon: "notification", to: "/notificacoes", badge: true },
   {
     key: "relatorios",
     label: "Relatórios",
@@ -56,6 +58,7 @@ export function Sidebar({
 }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { unreadCount } = useNotifications();
 
   async function handleLogout() {
     await logout();
@@ -94,6 +97,7 @@ export function Sidebar({
               end={item.end}
               isCollapsed={!isOpen && !isMobile}
               onSelect={isMobile ? onClose : undefined}
+              badge={item.badge && unreadCount > 0 ? unreadCount : undefined}
             />
           ))}
         </nav>

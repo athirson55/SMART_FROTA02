@@ -97,7 +97,11 @@ def serialize_notification(item: Notification) -> dict:
         "titulo": item.titulo,
         "mensagem": item.mensagem,
         "tipo": item.tipo,
+        "prioridade": item.prioridade,
         "isRead": item.is_read,
+        "lidaEm": item.lida_em,
+        "referenciaTipo": item.referencia_tipo,
+        "referenciaId": item.referencia_id,
         "payloadJson": item.payload_json,
         "createdAt": item.created_at,
         "updatedAt": item.updated_at,
@@ -443,14 +447,45 @@ def generate_auto_alerts(db: Session) -> list[Alert]:
     return created
 
 
-def list_notifications(db: Session, search: str | None = None, page: int = 1, limit: int = 25):
+def list_notifications(db: Session, search: str | None = None, page: int = 1, limit: int = 25, user_id: str | None = None, is_read: bool | None = None, tipo: str | None = None, prioridade: str | None = None):
     query = select(Notification)
+    if user_id:
+        query = query.where(Notification.user_id == user_id)
+    if is_read is not None:
+        query = query.where(Notification.is_read == is_read)
+    if tipo and tipo.lower() != "todos":
+        query = query.where(Notification.tipo == tipo.upper())
+    if prioridade and prioridade.lower() != "todas":
+        query = query.where(Notification.prioridade == prioridade.upper())
     if search:
         term = f"%{search.strip()}%"
         query = query.where((Notification.titulo.ilike(term)) | (Notification.mensagem.ilike(term)) | (Notification.tipo.ilike(term)))
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     items = db.scalars(query.order_by(Notification.created_at.desc()).offset((page - 1) * limit).limit(limit)).all()
     return items, total, {"page": page, "limit": limit}
+
+
+def count_unread_notifications(db: Session, user_id: str) -> int:
+    return db.scalar(
+        select(func.count()).select_from(Notification).where(
+            Notification.user_id == user_id, Notification.is_read.is_(False)
+        )
+    ) or 0
+
+
+def mark_all_notifications_read(db: Session, user_id: str) -> int:
+    now = datetime.now(timezone.utc)
+    rows = db.scalars(
+        select(Notification).where(
+            Notification.user_id == user_id, Notification.is_read.is_(False)
+        )
+    ).all()
+    for n in rows:
+        n.is_read = True
+        n.lida_em = now
+        db.add(n)
+    db.commit()
+    return len(rows)
 
 
 def get_notification(db: Session, notification_id: str) -> Notification:
@@ -467,7 +502,10 @@ def create_notification(db: Session, data: dict) -> Notification:
         titulo=data["titulo"].strip(),
         mensagem=data["mensagem"].strip(),
         tipo=data.get("tipo") or "INFO",
+        prioridade=data.get("prioridade") or "MEDIA",
         is_read=bool(data.get("isRead", False)),
+        referencia_tipo=data.get("referenciaTipo"),
+        referencia_id=data.get("referenciaId"),
         payload_json=data.get("payloadJson"),
     )
     db.add(item)
@@ -481,14 +519,19 @@ def update_notification(db: Session, item: Notification, data: dict) -> Notifica
         "titulo": "titulo",
         "mensagem": "mensagem",
         "tipo": "tipo",
+        "prioridade": "prioridade",
         "userId": "user_id",
         "alertId": "alert_id",
+        "referenciaTipo": "referencia_tipo",
+        "referenciaId": "referencia_id",
         "payloadJson": "payload_json",
         "isRead": "is_read",
     }
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(item, field, data[key])
+    if data.get("isRead") is True and item.lida_em is None:
+        item.lida_em = datetime.now(timezone.utc)
     db.add(item)
     db.commit()
     db.refresh(item)

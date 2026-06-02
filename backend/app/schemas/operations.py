@@ -125,8 +125,11 @@ class NotificationBase(BaseModel):
     titulo: str = Field(min_length=2, max_length=160)
     mensagem: str = Field(min_length=2)
     tipo: str = Field(default="INFO", max_length=40)
+    prioridade: str = Field(default="MEDIA", max_length=20)
     userId: str | None = None
     alertId: str | None = None
+    referenciaTipo: str | None = None
+    referenciaId: str | None = None
     payloadJson: str | None = None
     isRead: bool = False
 
@@ -139,7 +142,10 @@ class NotificationUpdate(BaseModel):
     titulo: str | None = Field(default=None, min_length=2, max_length=160)
     mensagem: str | None = None
     tipo: str | None = Field(default=None, max_length=40)
+    prioridade: str | None = Field(default=None, max_length=20)
     userId: str | None = None
     alertId: str | None = None
+    referenciaTipo: str | None = None
+    referenciaId: str | None = None
     payloadJson: str | None = None
     isRead: bool | None = None

@@ -6,6 +6,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { UiFeedbackProvider } from "./context/UiFeedbackContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { PreferencesProvider } from "./context/PreferencesContext";
+import { NotificationsProvider } from "./context/NotificationsContext";
 import "./styles.css";
 
 // Apply saved theme synchronously to avoid flash
@@ -43,9 +44,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ThemeProvider>
       <PreferencesProvider>
         <AuthProvider>
-          <UiFeedbackProvider>
-            <App />
-          </UiFeedbackProvider>
+          <NotificationsProvider>
+            <UiFeedbackProvider>
+              <App />
+            </UiFeedbackProvider>
+          </NotificationsProvider>
         </AuthProvider>
       </PreferencesProvider>
     </ThemeProvider>

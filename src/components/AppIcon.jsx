@@ -144,6 +144,22 @@ export function AppIcon({ type }) {
       </svg>
     );
   }
+  if (type === "check") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 12l5 5L20 7" {...common} />
+      </svg>
+    );
+  }
+  if (type === "notification") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 16H6l1.5-2v-3a4.5 4.5 0 1 1 9 0v3z" {...common} />
+        <path d="M10 18a2 2 0 0 0 4 0" {...common} />
+        <circle cx="18" cy="6" r="3" fill="currentColor" stroke="none" />
+      </svg>
+    );
+  }
 
   return null;
 }

@@ -10,8 +10,10 @@ import { AppCard } from "../components/ui/AppCard";
 import { EmptyState } from "../components/ui/EmptyState";
 import { TableRow } from "../components/ui/TableRow";
 import { useUiFeedback } from "../context/UiFeedbackContext";
+import { useNotifications } from "../context/NotificationsContext";
 import { getVehicles } from "../services/vehicles";
 import { getDashboardReport } from "../services/reports";
+import { getNotificationsSummary } from "../services/notifications";
 
 function normalizeDashboardVehicle(vehicle) {
   const pendencies = (vehicle.pendencias ?? []).map((pending) => ({
@@ -151,12 +153,14 @@ export function DashboardPage() {
   const isMobile = useIsMobile(900);
   const navigate = useNavigate();
   const { showInfo, showSuccess } = useUiFeedback();
+  const { unreadCount } = useNotifications();
   const [statusFilter, setStatusFilter] = useState("Todos");
   const [vehicleFilter, setVehicleFilter] = useState("");
   const [summaryModal, setSummaryModal] = useState(null);
   const [pendingModal, setPendingModal] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [dashboardKpis, setDashboardKpis] = useState(null);
+  const [notifSummary, setNotifSummary] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -180,6 +184,15 @@ export function DashboardPage() {
       .catch((err) => {
         console.error("Erro ao carregar relatório do dashboard:", err);
         if (active) setDashboardKpis(null);
+      });
+
+    getNotificationsSummary()
+      .then((res) => {
+        if (!active) return;
+        setNotifSummary(res.data?.data ?? null);
+      })
+      .catch(() => {
+        if (active) setNotifSummary(null);
       });
 
     return () => {
@@ -399,6 +412,89 @@ export function DashboardPage() {
             <h4>Alertas críticos</h4>
             <p>{insights.criticalAlerts} {insights.criticalAlerts === 1 ? "alerta" : "alertas"} de alta prioridade</p>
           </AppCard>
+        </section>
+
+        {/* Notification summary cards */}
+        <div className="fg-home-section-head" style={{ marginTop: "24px" }}>
+          <h3>Resumo de notificações</h3>
+          <button
+            type="button"
+            onClick={() => navigate("/notificacoes")}
+            style={{ fontSize: "0.8rem" }}
+          >
+            Ver central de notificações
+          </button>
+        </div>
+        <section className="fg-dashboard-notif-summary">
+          <article
+            className="fg-dashboard-notif-card fg-interactive-card"
+            data-tone="blue"
+            onClick={() => navigate("/notificacoes")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") navigate("/notificacoes"); }}
+          >
+            <span className="fg-dashboard-notif-card-icon">
+              <AppIcon type="bell" />
+            </span>
+            <div>
+              <strong className="fg-dashboard-notif-count">{unreadCount}</strong>
+              <p>Notificações não lidas</p>
+            </div>
+          </article>
+
+          <article
+            className="fg-dashboard-notif-card fg-interactive-card"
+            data-tone="red"
+            onClick={() => navigate("/notificacoes?prioridade=CRITICA")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") navigate("/notificacoes?prioridade=CRITICA"); }}
+          >
+            <span className="fg-dashboard-notif-card-icon">
+              <AppIcon type="clock" />
+            </span>
+            <div>
+              <strong className="fg-dashboard-notif-count is-red">{notifSummary?.criticos ?? 0}</strong>
+              <p>Alertas críticos</p>
+            </div>
+          </article>
+
+          <article
+            className="fg-dashboard-notif-card fg-interactive-card"
+            data-tone="gold"
+            onClick={() => navigate("/notificacoes?prioridade=ALTA")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") navigate("/notificacoes?prioridade=ALTA"); }}
+          >
+            <span className="fg-dashboard-notif-card-icon">
+              <AppIcon type="doc" />
+            </span>
+            <div>
+              <strong className="fg-dashboard-notif-count is-gold">{notifSummary?.altos ?? 0}</strong>
+              <p>Prioridade alta</p>
+            </div>
+          </article>
+
+          <article
+            className="fg-dashboard-notif-card fg-interactive-card"
+            data-tone="green"
+            onClick={() => navigate("/notificacoes")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter") navigate("/notificacoes"); }}
+          >
+            <span className="fg-dashboard-notif-card-icon">
+              <AppIcon type="check" />
+            </span>
+            <div>
+              <strong className="fg-dashboard-notif-count is-green">
+                {notifSummary ? (notifSummary.total === 0 ? "OK" : notifSummary.total) : "—"}
+              </strong>
+              <p>Total de pendências</p>
+            </div>
+          </article>
         </section>
 
         <div className="fg-dashboard-toolbar">
