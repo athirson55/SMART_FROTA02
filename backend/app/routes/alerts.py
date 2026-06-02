@@ -34,7 +34,9 @@ def read_alert(alert_id: str, db: Session = Depends(get_db), current_user=Depend
 
 @router.post("")
 def create_alert_route(payload: AlertCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    item = create_alert(db, payload.model_dump())
+    data = payload.model_dump()
+    data["criadoPor"] = current_user.id
+    item = create_alert(db, data)
     return success_response("Alerta criado com sucesso", serialize_alert(item), status_code=201)
 
 
@@ -50,7 +52,7 @@ def update_alert_route(alert_id: str, payload: AlertUpdate, db: Session = Depend
 def resolve_alert_route(alert_id: str, payload: dict = Body(default={}), db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     item = get_alert(db, alert_id)
     observacao = payload.get("observacao")
-    item = resolve_alert(db, item, observacao=observacao)
+    item = resolve_alert(db, item, observacao=observacao, user_id=current_user.id)
     return success_response("Alerta resolvido com sucesso", serialize_alert(item))
 
 

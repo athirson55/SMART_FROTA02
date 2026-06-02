@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.fleet import Driver, Vehicle, VehiclePendencia
 from app.models.operations import Alert, Appointment, Maintenance, Notification, Route
+from app.models.user import User
 from app.services.fleet_service import serialize_vehicle
 
 
@@ -84,6 +85,9 @@ def serialize_alert(item: Alert) -> dict:
         "responsavel": item.responsavel,
         "observacao": item.observacao,
         "resolvidoEm": item.resolvido_em,
+        "criadoPor": item.criado_por,
+        "resolvidoPor": item.resolvido_por,
+        "emailEnviado": item.email_enviado,
         "createdAt": item.created_at,
         "updatedAt": item.updated_at,
     }
@@ -336,6 +340,7 @@ def create_alert(db: Session, data: dict) -> Alert:
         acao=(data.get("acao") or None),
         responsavel=(data.get("responsavel") or None),
         observacao=(data.get("observacao") or None),
+        criado_por=(data.get("criadoPor") or None),
     )
     db.add(item)
     db.commit()
@@ -368,11 +373,13 @@ def update_alert(db: Session, item: Alert, data: dict) -> Alert:
     return item
 
 
-def resolve_alert(db: Session, item: Alert, observacao: str | None = None) -> Alert:
+def resolve_alert(db: Session, item: Alert, observacao: str | None = None, user_id: str | None = None) -> Alert:
     item.status = "RESOLVIDO"
     item.resolvido_em = datetime.now(timezone.utc)
     if observacao is not None:
         item.observacao = observacao
+    if user_id is not None:
+        item.resolvido_por = user_id
     # Resolve any linked unresolved pendências with the same vehicle + label
     if item.vehicle_id:
         pendencias = db.scalars(
@@ -419,31 +426,263 @@ def delete_alert(db: Session, item: Alert) -> None:
 
 
 def generate_auto_alerts(db: Session) -> list[Alert]:
-    created: list[Alert] = []
-    vehicles = db.scalars(select(Vehicle).options(joinedload(Vehicle.motorista))).all()
+    from app.core.config import get_settings
+    from app.core.email import send_alert_email
+
     now = datetime.now(timezone.utc)
-    for vehicle in vehicles:
-        pendientes = db.scalars(select(VehiclePendencia).where(VehiclePendencia.vehicle_id == vehicle.id, VehiclePendencia.resolved_at.is_(None))).all()
-        for pending in pendientes:
-            exists = db.scalar(select(Alert).where(Alert.vehicle_id == vehicle.id, Alert.titulo == pending.label, Alert.status != "RESOLVIDO"))
-            if exists:
-                continue
-            alert = Alert(
-                vehicle_id=vehicle.id,
-                tipo="manutencao" if "manut" in pending.slug.lower() or "oleo" in pending.slug.lower() or "troca" in pending.slug.lower() else "documento",
-                titulo=pending.label,
-                mensagem=pending.detail or pending.label,
-                prioridade="CRITICO" if pending.tone.upper() == "RED" else "MEDIO",
-                status="PENDENTE",
-                km=vehicle.km,
-                acao="Verificar pendência",
-                responsavel=vehicle.motorista.nome if vehicle.motorista else None,
+    created: list[Alert] = []
+
+    def _tz(dt):
+        if dt is None:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    # Build fingerprint set from existing unresolved auto alerts
+    existing_auto = db.scalars(
+        select(Alert).where(Alert.status != "RESOLVIDO", Alert.observacao.like("auto::%"))
+    ).all()
+    fps: set[str] = {a.observacao for a in existing_auto if a.observacao}
+
+    def _new(fp: str) -> bool:
+        return fp not in fps
+
+    def _add(fp: str, **kw) -> Alert:
+        a = Alert(observacao=fp, status="PENDENTE", **kw)
+        db.add(a)
+        fps.add(fp)
+        created.append(a)
+        return a
+
+    # ── Vehicles (base query with driver) ────────────────────────────────
+    vehicles = db.scalars(
+        select(Vehicle).options(joinedload(Vehicle.motorista))
+    ).unique().all()
+    driver_to_vehicle: dict[str, Vehicle] = {}
+    for v in vehicles:
+        if v.motorista_id and v.motorista_id not in driver_to_vehicle:
+            driver_to_vehicle[v.motorista_id] = v
+
+    # ── CNH dos motoristas ───────────────────────────────────────────────
+    drivers = db.scalars(select(Driver)).all()
+    for drv in drivers:
+        exp = _tz(drv.cnh_vencimento)
+        if not exp:
+            continue
+        days = (exp - now).days
+        fp = f"auto::cnh::{drv.id}"
+        linked = driver_to_vehicle.get(drv.id)
+        v_id = linked.id if linked else None
+        km = linked.km if linked else 0
+        if days < 0 and _new(fp):
+            _add(fp, vehicle_id=v_id, tipo="documento", km=km, responsavel=drv.nome,
+                titulo=f"CNH vencida — {drv.nome}",
+                mensagem=f"A CNH do motorista {drv.nome} venceu há {abs(days)} dia(s). Regularize imediatamente.",
+                prioridade="CRITICO", acao="Regularizar CNH junto ao DETRAN")
+        elif 0 <= days <= 15 and _new(fp):
+            _add(fp, vehicle_id=v_id, tipo="documento", km=km, responsavel=drv.nome,
+                titulo=f"CNH vence em {days} dia(s) — {drv.nome}",
+                mensagem=f"A CNH do motorista {drv.nome} vence em {days} dia(s). Providencie a renovação.",
+                prioridade="CRITICO", acao="Iniciar processo de renovação da CNH")
+        elif 15 < days <= 30 and _new(fp):
+            _add(fp, vehicle_id=v_id, tipo="documento", km=km, responsavel=drv.nome,
+                titulo=f"CNH vence em {days} dia(s) — {drv.nome}",
+                mensagem=f"A CNH do motorista {drv.nome} vence em {days} dia(s). Planeje a renovação.",
+                prioridade="MEDIO", acao="Agendar renovação da CNH")
+
+    # ── CRLV, Seguro, Revisão km/data por veículo ────────────────────────
+    for v in vehicles:
+        lbl = f"{v.modelo} ({v.placa})"
+        resp = v.motorista.nome if v.motorista else None
+
+        # CRLV
+        exp = _tz(v.vencimento_crlv)
+        if exp:
+            days = (exp - now).days
+            fp = f"auto::crlv::{v.id}"
+            if days < 0 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="documento", km=v.km, responsavel=resp,
+                    titulo=f"CRLV vencido — {lbl}",
+                    mensagem=f"O CRLV do veículo {lbl} venceu há {abs(days)} dia(s). Regularize imediatamente.",
+                    prioridade="CRITICO", acao="Licenciar o veículo junto ao DETRAN")
+            elif 0 <= days <= 15 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="documento", km=v.km, responsavel=resp,
+                    titulo=f"CRLV vence em {days} dia(s) — {lbl}",
+                    mensagem=f"O CRLV do veículo {lbl} vence em {days} dia(s). Providencie o licenciamento.",
+                    prioridade="CRITICO", acao="Providenciar licenciamento do veículo")
+            elif 15 < days <= 30 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="vencimento", km=v.km, responsavel=resp,
+                    titulo=f"CRLV vence em {days} dia(s) — {lbl}",
+                    mensagem=f"O CRLV do veículo {lbl} vence em {days} dia(s). Planeje o licenciamento.",
+                    prioridade="MEDIO", acao="Agendar licenciamento do veículo")
+
+        # Seguro
+        exp = _tz(v.vencimento_seguro)
+        if exp:
+            days = (exp - now).days
+            fp = f"auto::seguro::{v.id}"
+            if days < 0 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="seguro", km=v.km, responsavel=resp,
+                    titulo=f"Seguro vencido — {lbl}",
+                    mensagem=f"O seguro do veículo {lbl} venceu há {abs(days)} dia(s). Renove imediatamente.",
+                    prioridade="CRITICO", acao="Contratar novo seguro para o veículo")
+            elif 0 <= days <= 15 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="seguro", km=v.km, responsavel=resp,
+                    titulo=f"Seguro vence em {days} dia(s) — {lbl}",
+                    mensagem=f"O seguro do veículo {lbl} vence em {days} dia(s). Renove urgentemente.",
+                    prioridade="CRITICO", acao="Renovar o seguro do veículo")
+            elif 15 < days <= 30 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="seguro", km=v.km, responsavel=resp,
+                    titulo=f"Seguro vence em {days} dia(s) — {lbl}",
+                    mensagem=f"O seguro do veículo {lbl} vence em {days} dia(s). Planeje a renovação.",
+                    prioridade="MEDIO", acao="Solicitar proposta de renovação do seguro")
+
+        # Revisão por km
+        if v.proxima_revisao_km is not None:
+            diff = v.proxima_revisao_km - v.km
+            fp = f"auto::revisao_km::{v.id}"
+            if diff <= 0 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="revisao", km=v.km, responsavel=resp,
+                    titulo=f"Revisão km vencida — {lbl}",
+                    mensagem=f"O veículo {lbl} ultrapassou o km de revisão ({v.km:,} km / previsto {v.proxima_revisao_km:,} km).",
+                    prioridade="CRITICO", acao="Agendar revisão imediatamente")
+            elif 0 < diff <= 2000 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="revisao", km=v.km, responsavel=resp,
+                    titulo=f"Revisão km próxima — {lbl}",
+                    mensagem=f"O veículo {lbl} está a {diff:,} km da revisão programada ({v.proxima_revisao_km:,} km).",
+                    prioridade="MEDIO", acao="Agendar revisão preventiva")
+
+        # Revisão por data
+        exp = _tz(v.proxima_revisao_data)
+        if exp:
+            days = (exp - now).days
+            fp = f"auto::revisao_data::{v.id}"
+            if days < 0 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="revisao", km=v.km, responsavel=resp,
+                    titulo=f"Revisão vencida — {lbl}",
+                    mensagem=f"A revisão do veículo {lbl} estava prevista para {exp.strftime('%d/%m/%Y')} e não foi realizada.",
+                    prioridade="CRITICO", acao="Agendar revisão imediatamente")
+            elif 0 <= days <= 7 and _new(fp):
+                _add(fp, vehicle_id=v.id, tipo="revisao", km=v.km, responsavel=resp,
+                    titulo=f"Revisão em {days} dia(s) — {lbl}",
+                    mensagem=f"A revisão do veículo {lbl} está prevista para {exp.strftime('%d/%m/%Y')}.",
+                    prioridade="MEDIO", acao="Confirmar agendamento da revisão")
+
+    # ── Manutenções vencidas ─────────────────────────────────────────────
+    overdue_m = db.scalars(
+        select(Maintenance).options(
+            joinedload(Maintenance.vehicle).joinedload(Vehicle.motorista)
+        ).where(
+            Maintenance.status.in_(["PENDENTE", "AGENDADA"]),
+            Maintenance.data < now,
+        )
+    ).unique().all()
+    for m in overdue_m:
+        fp = f"auto::manutencao::{m.id}"
+        if not _new(fp):
+            continue
+        v = m.vehicle
+        lbl = f"{v.modelo} ({v.placa})" if v else "Veículo"
+        m_data = _tz(m.data)
+        overdue_days = (now - m_data).days if m_data else 0
+        _add(fp, vehicle_id=m.vehicle_id, tipo="manutencao", km=m.km,
+            titulo=f"Manutenção atrasada — {lbl}",
+            mensagem=f"Manutenção {m.tipo} do veículo {lbl} está atrasada há {overdue_days} dia(s): {m.descricao[:80]}",
+            prioridade="CRITICO" if overdue_days > 7 else "MEDIO",
+            acao="Realizar manutenção ou reagendar",
+            responsavel=m.mecanico or (v.motorista.nome if v and v.motorista else None))
+
+    # ── Agendamentos vencidos ────────────────────────────────────────────
+    overdue_a = db.scalars(
+        select(Appointment).options(
+            joinedload(Appointment.vehicle).joinedload(Vehicle.motorista)
+        ).where(
+            Appointment.status.in_(["AGENDADO", "CONFIRMADO"]),
+            Appointment.data < now,
+        )
+    ).unique().all()
+    for appt in overdue_a:
+        fp = f"auto::agendamento::{appt.id}"
+        if not _new(fp):
+            continue
+        v = appt.vehicle
+        lbl = f"{v.modelo} ({v.placa})" if v else "Veículo"
+        a_data = _tz(appt.data)
+        overdue_days = (now - a_data).days if a_data else 0
+        _add(fp, vehicle_id=appt.vehicle_id, tipo="manutencao", km=appt.km,
+            titulo=f"Agendamento não realizado — {lbl}",
+            mensagem=f"Agendamento de {appt.tipo} do veículo {lbl} não foi concluído. Venceu há {overdue_days} dia(s).",
+            prioridade="CRITICO" if overdue_days > 1 else "MEDIO",
+            acao="Reagendar ou marcar como concluído",
+            responsavel=appt.responsavel or (v.motorista.nome if v and v.motorista else None))
+
+    # ── Rotas em andamento além do prazo ─────────────────────────────────
+    overdue_r = db.scalars(
+        select(Route).options(
+            joinedload(Route.vehicle).joinedload(Vehicle.motorista),
+            joinedload(Route.motorista),
+        ).where(
+            Route.status == "EM_ANDAMENTO",
+            Route.data_fim.isnot(None),
+            Route.data_fim < now,
+        )
+    ).unique().all()
+    for route in overdue_r:
+        fp = f"auto::rota::{route.id}"
+        if not _new(fp):
+            continue
+        v = route.vehicle
+        lbl = f"{v.modelo} ({v.placa})" if v else "Veículo"
+        motorista_nome = (route.motorista.nome if route.motorista else
+                         (v.motorista.nome if v and v.motorista else None))
+        _add(fp, vehicle_id=route.vehicle_id, tipo="documento",
+            km=v.km if v else 0, responsavel=motorista_nome,
+            titulo=f"Rota atrasada — {lbl}",
+            mensagem=f"A rota de {route.origem} → {route.destino} está além do prazo previsto.",
+            prioridade="CRITICO", acao="Verificar status da entrega e contatar motorista")
+
+    # ── Pendências de veículos ───────────────────────────────────────────
+    for v in vehicles:
+        pendencias = db.scalars(
+            select(VehiclePendencia).where(
+                VehiclePendencia.vehicle_id == v.id,
+                VehiclePendencia.resolved_at.is_(None),
             )
-            db.add(alert)
-            created.append(alert)
+        ).all()
+        for p in pendencias:
+            fp = f"auto::pendencia::{p.id}"
+            if not _new(fp):
+                continue
+            tipo = "manutencao" if any(k in p.slug.lower() for k in ("manut", "oleo", "troca")) else "documento"
+            _add(fp, vehicle_id=v.id, tipo=tipo, km=v.km,
+                titulo=p.label,
+                mensagem=p.detail or p.label,
+                prioridade="CRITICO" if p.tone.upper() == "RED" else "MEDIO",
+                acao="Verificar e resolver pendência",
+                responsavel=v.motorista.nome if v.motorista else None)
+
     db.commit()
-    for alert in created:
-        db.refresh(alert)
+    for a in created:
+        db.refresh(a)
+
+    # ── Enviar e-mail para alertas críticos novos ────────────────────────
+    criticos = [a for a in created if a.prioridade == "CRITICO"]
+    if criticos:
+        try:
+            settings = get_settings()
+            admins = db.scalars(select(User).where(User.is_active.is_(True))).all()
+            alerts_data = [
+                {"titulo": a.titulo, "mensagem": a.mensagem, "prioridade": a.prioridade}
+                for a in criticos
+            ]
+            for admin in admins:
+                send_alert_email(admin.email, alerts_data, settings)
+            for a in criticos:
+                a.email_enviado = True
+                db.add(a)
+            db.commit()
+        except Exception:
+            pass
+
     return created
 
 

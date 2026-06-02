@@ -403,9 +403,9 @@ export function AppHeader({ isMobile = false, onMenuToggle }) {
                   <button
                     type="button"
                     className="fg-notif-mark-all"
-                    onClick={() => { navigate("/notificacoes"); setIsNotificationOpen(false); }}
+                    onClick={() => { navigate("/alertas"); setIsNotificationOpen(false); }}
                   >
-                    Ver todas
+                    Ver alertas
                   </button>
                 </div>
               </div>

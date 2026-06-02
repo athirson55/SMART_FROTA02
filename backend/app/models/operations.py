@@ -82,6 +82,9 @@ class Alert(Base):
     responsavel: Mapped[str | None] = mapped_column(String(120), nullable=True)
     observacao: Mapped[str | None] = mapped_column(Text, nullable=True)
     resolvido_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    criado_por: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    resolvido_por: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    email_enviado: Mapped[bool] = mapped_column(default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 

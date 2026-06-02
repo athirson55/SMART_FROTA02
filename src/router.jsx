@@ -14,7 +14,6 @@ import { DriversPage } from "./pages/DriversPage";
 import { MaintenancesPage } from "./pages/MaintenancesPage";
 import { AppointmentsPage } from "./pages/AppointmentsPage";
 import { AlertsPage } from "./pages/AlertsPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
 import { RotasPage } from "./pages/RotasPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -56,10 +55,6 @@ const privateRoutes = [
   {
     path: "/alertas",
     element: <AlertsPage />,
-  },
-  {
-    path: "/notificacoes",
-    element: <NotificationsPage />,
   },
   {
     path: "/relatorios",

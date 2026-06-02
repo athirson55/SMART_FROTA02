@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "../components/AppLayout";
 import { AppHeader } from "../components/AppHeader";
 import {
+  generateAutoAlerts,
   getAlerts,
   resolveAlert as resolveAlertRequest,
   unresolveAlert as unresolveAlertRequest,
@@ -84,6 +85,7 @@ function normalizeAlert(item) {
       item.vehicleName ||
       "Sem veículo",
     placa: vehicle.placa || vehicle.plate || item.placa || "",
+    motorista: vehicle.driver || vehicle.motorista?.nome || "",
     tipo: String(item.tipo || "OUTRO").toLowerCase(),
     titulo: item.titulo || item.title || "Alerta",
     desc: item.mensagem || item.desc || item.message || "",
@@ -93,6 +95,7 @@ function normalizeAlert(item) {
     km: Number(item.km ?? 0),
     acao: item.acao || "",
     responsavel: item.responsavel || "",
+    resolvidoPor: item.resolvidoPor || "",
     resolvedAt: item.resolvidoEm || item.resolvedAt || null,
     obs: item.observacao || item.obs || "",
   };
@@ -149,6 +152,8 @@ export function AlertsPage() {
   useEffect(() => {
     let active = true;
 
+    generateAutoAlerts().catch(() => {});
+
     getAlerts({ limit: 100 })
       .then((res) => {
         if (!active) return;
@@ -196,8 +201,10 @@ export function AlertsPage() {
         [
           item.veiculo,
           item.placa,
+          item.motorista,
           item.titulo,
           item.desc,
+          item.responsavel,
           getType(item.tipo).label,
         ]
           .join(" ")
@@ -833,6 +840,20 @@ export function AlertsPage() {
                       {selectedAlert.responsavel}
                     </div>
                   </div>
+                  {selectedAlert.resolvidoPor ? (
+                    <div className="drawer-row">
+                      <div className="drawer-label">Resolvido por</div>
+                      <div className="drawer-value">{selectedAlert.resolvidoPor}</div>
+                    </div>
+                  ) : null}
+                  {selectedAlert.resolvedAt ? (
+                    <div className="drawer-row">
+                      <div className="drawer-label">Resolvido em</div>
+                      <div className="drawer-value">
+                        {formatDate(String(selectedAlert.resolvedAt).slice(0, 10))}
+                      </div>
+                    </div>
+                  ) : null}
                 </section>
 
                 {selectedAlert.acao ? (

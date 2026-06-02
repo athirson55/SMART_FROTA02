@@ -255,3 +255,61 @@ def send_password_reset_success_email(to_email: str, name: str, settings) -> Non
     html = _build_reset_success_html(name)
     text = _build_reset_success_text(name)
     _dispatch_with_text(settings, to_email, "Smart Frota - Senha alterada com sucesso", html, text)
+
+
+_PRIORIDADE_COLOR = {
+    "CRITICO": "#DC2626",
+    "MEDIO": "#D97706",
+    "BAIXO": "#2563EB",
+}
+
+_PRIORIDADE_LABEL = {
+    "CRITICO": "CRÍTICO",
+    "MEDIO": "MODERADO",
+    "BAIXO": "BAIXO",
+}
+
+
+def _build_alert_email_html(alerts_data: list[dict], frontend_url: str) -> str:
+    """Build HTML for a batch of critical/important alerts."""
+    rows = ""
+    for a in alerts_data[:10]:
+        color = _PRIORIDADE_COLOR.get(a.get("prioridade", "MEDIO").upper(), "#D97706")
+        label = _PRIORIDADE_LABEL.get(a.get("prioridade", "MEDIO").upper(), "MODERADO")
+        rows += (
+            f'<tr>'
+            f'<td style="padding:10px 0;border-bottom:1px solid #e5e9f2;">'
+            f'<span style="display:inline-block;background:{color};color:#fff;font-size:10px;'
+            f'font-weight:700;padding:2px 7px;border-radius:4px;margin-bottom:4px;">{label}</span><br/>'
+            f'<strong style="font-size:13px;color:#1e2a3b;">{a.get("titulo","Alerta")}</strong><br/>'
+            f'<span style="font-size:12px;color:#64748b;">{a.get("mensagem","")[:120]}</span>'
+            f'</td>'
+            f'</tr>'
+        )
+
+    total = len(alerts_data)
+    alerts_url = f"{frontend_url}/#/alertas"
+    body = (
+        '<h2 style="margin:0 0 8px;font-size:22px;color:#1e2a3b;">Alertas da sua frota</h2>'
+        '<p style="margin:0 0 20px;font-size:14px;color:#64748b;">'
+        f'Foram identificados <strong style="color:#DC2626;">{total} alerta(s)</strong> '
+        'que precisam da sua atenção no Smart Frota.</p>'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">'
+        + rows
+        + "</table>"
+        + _btn(alerts_url, "Ver todos os alertas", "#DC2626")
+        + '<div style="background:#fff7f7;border:1px solid #fecaca;border-radius:10px;padding:14px 18px;margin-top:24px;">'
+        '<p style="margin:0;font-size:12px;color:#991b1b;">'
+        "Acesse a Central de Alertas para resolver os pendentes e evitar problemas na operação.</p></div>"
+    )
+    return _BASE.replace("{BODY}", body)
+
+
+def send_alert_email(to_email: str, alerts_data: list[dict], settings) -> bool:
+    """Send a batch alert notification email. alerts_data is list of dicts with titulo/mensagem/prioridade."""
+    if not alerts_data:
+        return False
+    frontend_url = getattr(settings, "frontend_url", "https://athirson55.github.io/SMART_FROTA02")
+    html = _build_alert_email_html(alerts_data, frontend_url)
+    subject = f"Smart Frota — {len(alerts_data)} alerta(s) crítico(s) na sua frota"
+    return _dispatch(settings, to_email, subject, html)
