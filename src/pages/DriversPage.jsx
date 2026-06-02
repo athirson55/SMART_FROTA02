@@ -11,6 +11,17 @@ import { AdicionarMotoristaModal } from "../components/AdicionarMotoristaModal";
 
 const filterKeys = ["Todos", "Em rota", "Disponível", "Afastado"];
 
+const STATUS_MAP = {
+  DISPONIVEL: "Disponível",
+  EM_ROTA: "Em rota",
+  AFASTADO: "Afastado",
+};
+
+function normalizeStatus(raw) {
+  if (!raw) return "Disponível";
+  return STATUS_MAP[String(raw).toUpperCase()] ?? raw;
+}
+
 function normalizeDriver(driver) {
   const initialsSource =
     driver.initials || driver.iniciais || driver.name || driver.nome || "";
@@ -41,7 +52,7 @@ function normalizeDriver(driver) {
     phone: driver.phone || driver.telefone || "",
     cnh: driver.cnh || "",
     category: driver.category || driver.cnhCategoria || "",
-    status: driver.status || "Disponível",
+    status: normalizeStatus(driver.status),
     vehicle,
     initials,
     avatarTone: driver.avatarTone || driver.avatarCor || "blue",
