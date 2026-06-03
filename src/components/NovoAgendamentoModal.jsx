@@ -93,6 +93,8 @@ export function NovoAgendamentoModal({
       e.tipoCustom = "Descreva o tipo";
     if (!form.data) e.data = "Informe a data";
     if (!form.hora) e.hora = "Informe o horário";
+    if (form.km !== "" && Number(form.km) < 0)
+      e.km = "Quilometragem não pode ser negativa";
     return e;
   }
 
@@ -266,11 +268,12 @@ export function NovoAgendamentoModal({
             <input
               type="number"
               min="0"
-              className="sf-input"
+              className={`sf-input ${errors.km ? "is-error" : ""}`}
               placeholder="Ex: 95000"
               value={form.km}
               onChange={(e) => set("km", e.target.value)}
             />
+            {errors.km && <span className="sf-field-error">{errors.km}</span>}
           </div>
 
           <div className="sf-field">

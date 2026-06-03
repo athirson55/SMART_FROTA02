@@ -75,17 +75,17 @@ function buildSummaryCards(report) {
       iconTone: "red",
     },
     {
-      title: "Entregas atrasadas",
+      title: "Agendamentos atrasados",
       description:
-        "Agendamentos críticos e próximos para acompanhamento operacional.",
-      value: String(report.agendamentos?.proximos ?? 0),
+        "Agendamentos que passaram da data prevista e ainda não foram concluídos.",
+      value: String(report.agendamentos?.atrasados ?? 0),
       valueClass: "is-purple",
       tags: [
-        `${report.agendamentos?.proximos ?? 0} próximos`,
-        `${report.motoristas?.emRota ?? 0} em rota`,
+        `${report.agendamentos?.atrasados ?? 0} atrasados`,
+        `${report.agendamentos?.proximos ?? 0} próximos (7 dias)`,
       ],
       action: "Acompanhar",
-      route: "/rotas",
+      route: "/agendamentos",
       icon: "clock",
       iconTone: "purple",
     },
@@ -235,11 +235,11 @@ export function HomePage() {
             </div>
             <div className="fg-home-kpis">
               <article>
-                <strong>{dashboard.agendamentos?.proximos ?? 0}</strong>
-                <span>Pedidos hoje</span>
+                <strong>{dashboard.agendamentos?.atrasados ?? 0}</strong>
+                <span>Atrasados</span>
               </article>
               <article>
-                <strong>{dashboard.motoristas?.emRota ?? 0}</strong>
+                <strong>{dashboard.veiculos?.emRota ?? 0}</strong>
                 <span>Em trânsito</span>
               </article>
               <article>

@@ -37,7 +37,20 @@ def dashboard_report(db: Session):
 
     appointments_upcoming = db.scalar(
         select(func.count()).select_from(Appointment).where(
-            and_(Appointment.data >= now, Appointment.data <= next_week)
+            and_(
+                Appointment.data >= now,
+                Appointment.data <= next_week,
+                Appointment.status.in_(["AGENDADO", "CONFIRMADO"]),
+            )
+        )
+    ) or 0
+
+    appointments_overdue = db.scalar(
+        select(func.count()).select_from(Appointment).where(
+            and_(
+                Appointment.data < now,
+                Appointment.status.in_(["AGENDADO", "CONFIRMADO"]),
+            )
         )
     ) or 0
 
@@ -96,6 +109,7 @@ def dashboard_report(db: Session):
         },
         "agendamentos": {
             "proximos": appointments_upcoming,
+            "atrasados": appointments_overdue,
         },
         "alertasRecentes": [
             {

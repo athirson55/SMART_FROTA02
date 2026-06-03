@@ -148,6 +148,10 @@ def get_maintenance(db: Session, maintenance_id: str) -> Maintenance:
 
 
 def create_maintenance(db: Session, data: dict) -> Maintenance:
+    if int(data.get("km") or 0) < 0:
+        raise HTTPException(status_code=422, detail="Quilometragem não pode ser negativa")
+    if float(data.get("custo") or 0) < 0:
+        raise HTTPException(status_code=422, detail="Custo não pode ser negativo")
     vehicle = _find_vehicle(db, data["veiculoId"])
     item = Maintenance(
         vehicle_id=vehicle.id,
@@ -267,6 +271,8 @@ def get_appointment(db: Session, appointment_id: str) -> Appointment:
 
 
 def create_appointment(db: Session, data: dict) -> Appointment:
+    if int(data.get("km") or 0) < 0:
+        raise HTTPException(status_code=422, detail="Quilometragem não pode ser negativa")
     vehicle = _find_vehicle(db, data["veiculoId"])
     item = Appointment(
         vehicle_id=vehicle.id,

@@ -10,7 +10,7 @@ from app.core.config import get_settings
 from app.database.init_db import seed_database
 from app.database.session import SessionLocal, create_tables
 from app.middlewares.rate_limit import SimpleRateLimitMiddleware
-from app.routes import alerts, appointments, auth, drivers, health, maintenances, notifications, reports, routes_route, settings as settings_routes, users, vehicles
+from app.routes import admin as admin_routes, alerts, appointments, auth, drivers, health, maintenances, notifications, reports, routes_route, settings as settings_routes, users, vehicles
 import re
 import os
 
@@ -50,6 +50,20 @@ async def lifespan(app: FastAPI):
                 db.close()
         except Exception as exc:
             logger.warning("Nao foi possivel semear o banco no startup: %s", exc)
+    # Reconcile historical status inconsistencies on every startup
+    try:
+        from app.services.reconciliation_service import reconcile_route_statuses
+        db = SessionLocal()
+        try:
+            stats = reconcile_route_statuses(db)
+            logger.info(
+                "Startup reconciliation: veiculos_corrigidos=%d, motoristas_corrigidos=%d, rotas_verificadas=%d",
+                stats["vehicles_fixed"], stats["drivers_fixed"], stats["routes_checked"],
+            )
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning("Nao foi possivel reconciliar status no startup: %s", exc)
     yield
 
 
@@ -108,6 +122,7 @@ def root():
 
 app.include_router(health.router)
 app.include_router(auth.router)
+app.include_router(admin_routes.router)
 app.include_router(users.router)
 app.include_router(drivers.router)
 app.include_router(vehicles.router)

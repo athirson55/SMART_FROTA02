@@ -6,8 +6,8 @@ import { AppHeader } from "../components/AppHeader";
 import { AppLayout } from "../components/AppLayout";
 import { EmptyState } from "../components/ui/EmptyState";
 import { getVehicles, deleteVehicle } from "../services/vehicles";
-import { getRoutes } from "../services/routes";
 import { getDrivers } from "../services/drivers";
+import { TrackingService } from "../services/tracking";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovoVeiculoModal } from "../components/NovoVeiculoModal";
 
@@ -18,11 +18,8 @@ function TrackingModal({ vehicle, onClose }) {
   useEffect(() => {
     if (!vehicle) return;
     setLoading(true);
-    getRoutes({ veiculoId: vehicle.id, status: "EM_ANDAMENTO", limit: 1 })
-      .then((res) => {
-        const routes = res.data?.data ?? [];
-        setActiveRoute(routes[0] ?? null);
-      })
+    TrackingService.getActiveRoute(vehicle.id)
+      .then((route) => setActiveRoute(route))
       .catch(() => setActiveRoute(null))
       .finally(() => setLoading(false));
   }, [vehicle]);
@@ -78,8 +75,16 @@ function TrackingModal({ vehicle, onClose }) {
               <div className="sf-drawer-section-title">Rota em andamento</div>
               <div className="sf-drawer-row"><div className="sf-drawer-label">Origem</div><div className="sf-drawer-value">{activeRoute.origem}</div></div>
               <div className="sf-drawer-row"><div className="sf-drawer-label">Destino</div><div className="sf-drawer-value">{activeRoute.destino}</div></div>
+              {activeRoute.motoristaNome && (
+                <div className="sf-drawer-row"><div className="sf-drawer-label">Motorista</div><div className="sf-drawer-value">{activeRoute.motoristaNome}</div></div>
+              )}
               {activeRoute.distanciaKm != null && (
                 <div className="sf-drawer-row"><div className="sf-drawer-label">Distância</div><div className="sf-drawer-value">{Number(activeRoute.distanciaKm).toLocaleString("pt-BR")} km</div></div>
+              )}
+              {!TrackingService.isRealtime && (
+                <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 8, textAlign: "center" }}>
+                  GPS simulado — pronto para integração com Traccar / Omnilink / Sascar
+                </div>
               )}
             </section>
           ) : (
