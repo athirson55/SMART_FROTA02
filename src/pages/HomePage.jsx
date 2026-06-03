@@ -176,9 +176,9 @@ export function HomePage() {
         setLoading(false);
       })
       .catch(() => {
-        // Retry silently up to 3x with 20 s intervals to cover Render cold-start (~30-60 s)
-        if (attempt < 3) {
-          setTimeout(() => fetchDashboard(attempt + 1), 20_000);
+        // Retry silently every 8 s up to 8x — catches Render cold-start (30-60 s) quickly
+        if (attempt < 8) {
+          setTimeout(() => fetchDashboard(attempt + 1), 8_000);
         } else {
           setLoading(false);
         }
