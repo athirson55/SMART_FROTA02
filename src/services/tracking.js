@@ -2,62 +2,50 @@
  * GPS Tracking Service — Smart Frota
  *
  * Architecture: provider pattern.
+ *   • Swap providers by changing `activeProvider` at the bottom of this file.
+ *   • All providers must implement TrackingProvider interface below.
  *
- * Current provider: SimulatedProvider (demo/PI)
- *   Returns static position data and active route from the database.
- *   Suitable for presentation and development.
+ * Current state: NO GPS provider is configured.
+ *   → Position data is unavailable until a real provider is connected.
+ *   → Active route data is always fetched from the database (real).
  *
- * Future providers to swap in:
- *   - TraccarProvider   — open-source self-hosted (Traccar server)
- *   - OmnilinkProvider  — Brazilian IoT fleet telemetry
- *   - SascarProvider    — Brazilian fleet management API
- *   - GenericGPSProvider — Adapter for any REST GPS API
+ * Supported providers (uncomment to activate):
+ *   TraccarProvider  — open-source self-hosted telemetry (Traccar server)
+ *   OmnilinkProvider — Brazilian IoT/fleet telemetry API
+ *   SascarProvider   — Brazilian fleet management API
  *
- * To replace the simulated provider, implement the TrackingProvider interface
- * below and set VITE_TRACKING_PROVIDER=your-provider in .env.
+ * Environment variables needed per provider:
+ *   Traccar:  VITE_TRACCAR_URL, VITE_TRACCAR_TOKEN
+ *   Omnilink: VITE_OMNILINK_URL, VITE_OMNILINK_TOKEN
+ *   Sascar:   VITE_SASCAR_URL, VITE_SASCAR_TOKEN
  *
  * TrackingProvider interface:
  *   getLastPosition(vehicleId: string): Promise<Position | null>
- *   getActiveRoute(vehicleId: string): Promise<Route | null>
- *   isRealtime: boolean   // true if the provider streams live updates
+ *   getActiveRoute(vehicleId: string):  Promise<ActiveRoute | null>
+ *   isConnected: boolean   — true when a real device/API is available
  *
- * Position: { lat, lng, speed, heading, updatedAt, isLive }
- * Route:    { origem, destino, distanciaKm, dataInicio, motoristaNome }
- */
-
-import { getRoutes } from "./routes.js";
-
-// ─── Types (JSDoc only, no TypeScript dependency) ────────────────────────────
-
-/**
- * @typedef {{ lat: number|null, lng: number|null, speed: number|null,
- *             heading: number|null, updatedAt: string|null, isLive: boolean }} Position
+ * @typedef {{ lat: number, lng: number, speed: number, heading: number,
+ *             updatedAt: string, deviceId: string }} Position
  *
  * @typedef {{ origem: string, destino: string, distanciaKm: number|null,
  *             dataInicio: string|null, motoristaNome: string|null }} ActiveRoute
  */
 
-// ─── Simulated Provider ───────────────────────────────────────────────────────
+import { getRoutes } from "./routes.js";
+
+// ─── No-device provider (default — honest "not connected" state) ─────────────
 
 /**
- * SimulatedProvider — used for PI demo.
- *
- * GPS coordinates are static / randomized; route data is fetched from the DB.
- * Replace this entire object to integrate a real telematics provider.
+ * NoDeviceProvider — used when no GPS hardware/API is configured.
+ * Returns null position so the UI can show "Sem dispositivo GPS".
+ * Route data is still real (from the database).
  */
-const SimulatedProvider = {
-  isRealtime: false,
+const NoDeviceProvider = {
+  isConnected: false,
 
-  /** @returns {Promise<Position>} */
+  /** @returns {Promise<null>} */
   async getLastPosition(_vehicleId) {
-    return {
-      lat: null,
-      lng: null,
-      speed: null,
-      heading: null,
-      updatedAt: null,
-      isLive: false,
-    };
+    return null;
   },
 
   /** @returns {Promise<ActiveRoute|null>} */
@@ -79,45 +67,55 @@ const SimulatedProvider = {
   },
 };
 
-// ─── Future provider stub (example Traccar integration) ──────────────────────
+// ─── Traccar provider (activate when self-hosted Traccar server is available) ─
 
 // const TraccarProvider = {
-//   isRealtime: true,
-//   baseUrl: import.meta.env.VITE_TRACCAR_URL || "https://traccar.yourserver.com",
-//   token:   import.meta.env.VITE_TRACCAR_TOKEN || "",
+//   isConnected: true,
+//   baseUrl: import.meta.env.VITE_TRACCAR_URL,
+//   token:   import.meta.env.VITE_TRACCAR_TOKEN,
 //
 //   async getLastPosition(vehicleId) {
-//     const res = await fetch(`${this.baseUrl}/api/positions?deviceId=${vehicleId}`, {
-//       headers: { Authorization: `Bearer ${this.token}` },
-//     });
+//     const res = await fetch(
+//       `${this.baseUrl}/api/positions?deviceId=${vehicleId}`,
+//       { headers: { Authorization: `Bearer ${this.token}` } },
+//     );
 //     const data = await res.json();
 //     const pos = data[0];
 //     if (!pos) return null;
-//     return { lat: pos.latitude, lng: pos.longitude, speed: pos.speed,
-//              heading: pos.course, updatedAt: pos.fixTime, isLive: true };
+//     return {
+//       lat: pos.latitude, lng: pos.longitude,
+//       speed: pos.speed, heading: pos.course,
+//       updatedAt: pos.fixTime, deviceId: pos.deviceId,
+//     };
 //   },
 //
 //   async getActiveRoute(vehicleId) {
-//     return SimulatedProvider.getActiveRoute(vehicleId); // still DB-backed
+//     return NoDeviceProvider.getActiveRoute(vehicleId);
 //   },
 // };
 
-// ─── Active provider (swap here for production) ───────────────────────────────
+// ─── Omnilink provider stub ───────────────────────────────────────────────────
 
-const activeProvider = SimulatedProvider;
-// const activeProvider = TraccarProvider;    // uncomment to use real GPS
+// const OmnilinkProvider = { isConnected: true, ... };
 
-// ─── Public API ──────────────────────────────────────────────────────────────
+// ─── Active provider ──────────────────────────────────────────────────────────
+// Change this line to switch providers:
+
+const activeProvider = NoDeviceProvider;
+// const activeProvider = TraccarProvider;
+// const activeProvider = OmnilinkProvider;
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export const TrackingService = {
-  /** Whether the current provider streams live updates */
-  get isRealtime() {
-    return activeProvider.isRealtime;
+  /** true when a real GPS provider is connected and sending data */
+  get isConnected() {
+    return activeProvider.isConnected;
   },
 
-  /** Get last known GPS position for a vehicle */
+  /** Last known GPS position, or null if no device is connected */
   getLastPosition: (vehicleId) => activeProvider.getLastPosition(vehicleId),
 
-  /** Get the current active route for a vehicle (from DB) */
+  /** Active route from the database (always real data) */
   getActiveRoute: (vehicleId) => activeProvider.getActiveRoute(vehicleId),
 };

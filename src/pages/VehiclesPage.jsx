@@ -47,15 +47,37 @@ function TrackingModal({ vehicle, onClose }) {
         </div>
 
         <div className="sf-drawer-body">
-          <div style={{ background: "#F1F5F9", borderRadius: 12, padding: "32px 24px", textAlign: "center", marginBottom: 16, position: "relative", overflow: "hidden" }}>
-            <div style={{ fontSize: 48, marginBottom: 8 }}>📍</div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "#1E293B" }}>{vehicle.model}</div>
-            <div style={{ fontSize: 13, color: "#64748B", marginBottom: 12 }}>{vehicle.plate}</div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 600, color: statusColor, border: `1.5px solid ${statusColor}` }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor, display: "inline-block" }} />
-              {vehicle.status}
+          {/* Vehicle summary card */}
+          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 12, padding: "20px 24px", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16, color: "#1E293B" }}>{vehicle.model}</div>
+                <div style={{ fontSize: 13, color: "#64748B", fontFamily: "monospace" }}>{vehicle.plate}</div>
+              </div>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#fff", borderRadius: 20, padding: "5px 14px", fontSize: 13, fontWeight: 600, color: statusColor, border: `1.5px solid ${statusColor}` }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", background: statusColor, display: "inline-block" }} />
+                {vehicle.status}
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 10 }}>GPS simulado — integração disponível via API</div>
+
+            {/* GPS status banner */}
+            {!TrackingService.isConnected && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8,
+                background: "#FFF7ED", border: "1px solid #FED7AA",
+                borderRadius: 8, padding: "10px 14px",
+              }}>
+                <svg viewBox="0 0 24 24" style={{ width: 16, height: 16, fill: "#EA580C", flexShrink: 0 }}>
+                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                </svg>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#92400E" }}>Sem dispositivo GPS vinculado</div>
+                  <div style={{ fontSize: 11, color: "#B45309", marginTop: 2 }}>
+                    Integração disponível com Traccar, Omnilink ou Sascar
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <section className="sf-drawer-section">
@@ -81,15 +103,10 @@ function TrackingModal({ vehicle, onClose }) {
               {activeRoute.distanciaKm != null && (
                 <div className="sf-drawer-row"><div className="sf-drawer-label">Distância</div><div className="sf-drawer-value">{Number(activeRoute.distanciaKm).toLocaleString("pt-BR")} km</div></div>
               )}
-              {!TrackingService.isRealtime && (
-                <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 8, textAlign: "center" }}>
-                  GPS simulado — pronto para integração com Traccar / Omnilink / Sascar
-                </div>
-              )}
             </section>
           ) : (
             <div style={{ background: "#F8FAFC", borderRadius: 8, padding: "14px 16px", fontSize: 13, color: "#64748B", textAlign: "center" }}>
-              Nenhuma rota em andamento para este veículo.
+              Nenhuma rota ativa para este veículo.
             </div>
           )}
         </div>
