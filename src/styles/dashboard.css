@@ -931,18 +931,21 @@
 .fg-home-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch; /* all cards in a row share the same height */
   gap: 22px;
 }
 
 .fg-home-summary-card {
+  /* visual */
   background: #fff;
   border: 1px solid #d3dceb;
   border-radius: 12px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   padding: 18px;
-  min-height: 146px;
+  /* flex column: description grows → KPI + footer always same distance from bottom */
   display: flex;
   flex-direction: column;
+  /* no min-height: grid row already stretches all siblings to the same height */
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -954,10 +957,12 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
 }
 
+/* ── SLOT 1: header (icon + title) ── */
 .fg-home-summary-title-row {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  flex-shrink: 0;
 }
 .fg-home-summary-title-row h4 {
   min-width: 0;
@@ -966,6 +971,7 @@
 .fg-home-summary-icon {
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   border-radius: 11px;
   display: grid;
   place-items: center;
@@ -974,22 +980,11 @@
   width: 16px;
   height: 16px;
 }
-.fg-home-summary-icon.gold {
-  background: #faefcf;
-  color: #bf7a0a;
-}
-.fg-home-summary-icon.red {
-  background: #f8e1e1;
-  color: #db3030;
-}
-.fg-home-summary-icon.purple {
-  background: #ece5fd;
-  color: #7e45d5;
-}
-.fg-home-summary-icon.green {
-  background: #dff3e6;
-  color: #1f9d52;
-}
+.fg-home-summary-icon.gold  { background: #faefcf; color: #bf7a0a; }
+.fg-home-summary-icon.red   { background: #f8e1e1; color: #db3030; }
+.fg-home-summary-icon.purple{ background: #ece5fd; color: #7e45d5; }
+.fg-home-summary-icon.green { background: #dff3e6; color: #1f9d52; }
+
 .fg-home-summary-card h4 {
   margin: 0;
   font-size: 13px;
@@ -997,43 +992,44 @@
   color: #1f2937;
   letter-spacing: -0.01em;
 }
+
+/* ── SLOT 2: description — flex-1 absorbs all remaining height ── */
 .fg-home-summary-card p {
-  margin: 10px 0 7px;
+  margin: 10px 0 0;
   font-size: 11px;
-  line-height: 1.34;
+  line-height: 1.55;
   color: #7d8898;
-  min-height: 36px;
+  /* fills available space → KPI + footer land at consistent vertical position */
+  flex: 1 1 auto;
+  min-height: 48px;   /* at least 3 visual lines to prevent collapse */
 }
+
+/* ── SLOT 3: KPI number — fixed below description ── */
 .fg-home-summary-value {
   display: block;
-  margin-top: auto;
-  margin-bottom: 12px;
+  /* NO margin-top: auto — the paragraph's flex-1 already pushes KPI down */
+  margin: 12px 0 10px;
   font-size: 18px;
   line-height: 1;
   font-weight: 600;
+  flex-shrink: 0;
 }
-.fg-home-summary-value.is-gold {
-  color: #c47f0f;
-}
-.fg-home-summary-value.is-red {
-  color: #d23d36;
-}
-.fg-home-summary-value.is-purple {
-  color: #7e45d5;
-}
-.fg-home-summary-value.is-green {
-  color: #1f9d52;
-}
+.fg-home-summary-value.is-gold   { color: #c47f0f; }
+.fg-home-summary-value.is-red    { color: #d23d36; }
+.fg-home-summary-value.is-purple { color: #7e45d5; }
+.fg-home-summary-value.is-green  { color: #1f9d52; }
 
+/* ── SLOT 4: footer (tags + action link) — always at card bottom ── */
 .fg-home-summary-footer {
+  flex-shrink: 0;
   border-top: 1px solid #eceff4;
   padding-top: 9px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 6px 8px;
-  min-height: 28px;
+  /* NO margin-top: auto — paragraph's flex-1 already handles spacing */
 }
 .fg-home-tag-list {
   display: flex;
@@ -1344,15 +1340,16 @@
 .fg-dashboard-insights .fg-home-summary-card {
   padding: 12px;
 }
-.fg-dashboard-insights h4 {
-  margin: 0 0 6px;
+.fg-dashboard-insights .fg-home-summary-card h4 {
+  margin: 0;
   font-size: 12px;
   color: #1f2937;
 }
-.fg-dashboard-insights p {
-  margin: 0;
+.fg-dashboard-insights .fg-home-summary-card p {
+  margin: 6px 0 0;
   font-size: 12px;
   color: #5f6d7e;
+  min-height: 36px;
 }
 
 .fg-dashboard-toolbar {
@@ -3453,8 +3450,8 @@
 [data-density="compacto"] .fg-home-content { padding: 14px 16px; }
 [data-density="compacto"] .fg-home-summary-grid,
 [data-density="compacto"] .fg-home-actions-grid { gap: 14px; }
-[data-density="compacto"] .fg-home-summary-card { padding: 13px; min-height: 126px; }
-[data-density="compacto"] .fg-home-summary-card p { min-height: unset; margin: 6px 0 5px; }
+[data-density="compacto"] .fg-home-summary-card { padding: 13px; }
+[data-density="compacto"] .fg-home-summary-card p { min-height: 36px; margin: 6px 0 0; }
 [data-density="compacto"] .fg-home-section-head { margin-top: 14px; margin-bottom: 8px; }
 [data-density="compacto"] .fg-home-nav-item,
 [data-density="compacto"] .fg-sidebar-item { min-height: 32px; }
@@ -3855,7 +3852,7 @@
   }
   .fg-home-summary-card p {
     font-size: 12px;
-    min-height: 42px;
+    /* keep min-height from primary block; flex-1 handles alignment */
   }
   .fg-home-summary-value {
     font-size: 20px;
@@ -4579,19 +4576,7 @@
   min-width: 86px;
 }
 
-/* Home — fix summary cards min-height for content consistency */
-.fg-home-summary-card {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-.fg-home-summary-card p {
-  flex: 1;
-  min-height: 0;
-}
-.fg-home-summary-footer {
-  margin-top: auto;
-}
+/* Home — summary card layout is now consolidated at the primary definition block */
 
 /* Summary footer hover use accent variable */
 .fg-home-summary-footer button:hover {
