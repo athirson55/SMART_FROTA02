@@ -39,17 +39,18 @@ const quickActions = [
   },
 ];
 
-function buildSummaryCards(report) {
+function buildSummaryCards(report, isLoading) {
+  const n = (val) => (isLoading ? "–" : String(val ?? 0));
   return [
     {
       title: "Documentos prestes a vencer",
       description:
         "Alertas operacionais e documentos que precisam de atenção imediata.",
-      value: String(report.alertas?.pendentes ?? 0),
+      value: n(report.alertas?.pendentes),
       valueClass: "is-gold",
       tags: [
-        `${report.alertas?.criticos ?? 0} críticos`,
-        `${report.alertas?.pendentes ?? 0} abertos`,
+        `${isLoading ? "–" : (report.alertas?.criticos ?? 0)} críticos`,
+        `${isLoading ? "–" : (report.alertas?.pendentes ?? 0)} abertos`,
       ],
       action: "Ver detalhes",
       route: "/alertas",
@@ -60,14 +61,16 @@ function buildSummaryCards(report) {
       title: "Manutenções próximas",
       description:
         "Veículos com manutenção pendente ou em andamento no banco real.",
-      value: String(
-        (report.manutencoes?.pendentes ?? 0) +
-          (report.manutencoes?.emAndamento ?? 0),
-      ),
+      value: isLoading
+        ? "–"
+        : String(
+            (report.manutencoes?.pendentes ?? 0) +
+              (report.manutencoes?.emAndamento ?? 0),
+          ),
       valueClass: "is-red",
       tags: [
-        `${report.manutencoes?.pendentes ?? 0} pendentes`,
-        `${report.manutencoes?.emAndamento ?? 0} em andamento`,
+        `${isLoading ? "–" : (report.manutencoes?.pendentes ?? 0)} pendentes`,
+        `${isLoading ? "–" : (report.manutencoes?.emAndamento ?? 0)} em andamento`,
       ],
       action: "Ver agenda",
       route: "/manutencoes",
@@ -78,11 +81,11 @@ function buildSummaryCards(report) {
       title: "Agendamentos atrasados",
       description:
         "Agendamentos que passaram da data prevista e ainda não foram concluídos.",
-      value: String(report.agendamentos?.atrasados ?? 0),
+      value: n(report.agendamentos?.atrasados),
       valueClass: "is-purple",
       tags: [
-        `${report.agendamentos?.atrasados ?? 0} atrasados`,
-        `${report.agendamentos?.proximos ?? 0} próximos`,
+        `${isLoading ? "–" : (report.agendamentos?.atrasados ?? 0)} atrasados`,
+        `${isLoading ? "–" : (report.agendamentos?.proximos ?? 0)} próximos`,
       ],
       action: "Acompanhar",
       route: "/agendamentos",
@@ -92,11 +95,11 @@ function buildSummaryCards(report) {
     {
       title: "Frota disponível",
       description: "Veículos ativos e prontos para operação.",
-      value: String(report.veiculos?.ativos ?? 0),
+      value: n(report.veiculos?.ativos),
       valueClass: "is-green",
       tags: [
-        `${report.veiculos?.ativos ?? 0} ativos`,
-        `${report.veiculos?.total ?? 0} total`,
+        `${isLoading ? "–" : (report.veiculos?.ativos ?? 0)} ativos`,
+        `${isLoading ? "–" : (report.veiculos?.total ?? 0)} total`,
       ],
       action: "Alocar frota",
       route: "/veiculos",
@@ -148,8 +151,7 @@ export function HomePage() {
   const { user } = useAuth();
   const [summaryModal, setSummaryModal] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const [waking, setWaking] = useState(false);
+  const [hasData, setHasData] = useState(false);
   const [dashboard, setDashboard] = useState({
     veiculos: {},
     motoristas: {},
@@ -162,39 +164,23 @@ export function HomePage() {
 
   const displayName = user?.nome || user?.name || "Usuário";
 
-  function fetchDashboard(isRetry = false) {
-    if (!isRetry) {
-      setLoading(true);
-      setLoadError(false);
-      setWaking(false);
-    }
-
+  function fetchDashboard(attempt = 0) {
+    if (attempt === 0) setLoading(true);
     getDashboardReport()
       .then((res) => {
         const data = res.data?.data;
         if (data) {
           setDashboard(data);
-          setLoadError(false);
-          setWaking(false);
-        } else {
-          setLoadError(true);
-          setWaking(false);
+          setHasData(true);
         }
         setLoading(false);
       })
-      .catch((err) => {
-        if (isRetry) {
-          // Second attempt also failed
-          console.error("Erro ao carregar dashboard (retry):", err);
-          setLoadError(true);
-          setWaking(false);
-          setLoading(false);
+      .catch(() => {
+        // Retry silently up to 3x with 20 s intervals to cover Render cold-start (~30-60 s)
+        if (attempt < 3) {
+          setTimeout(() => fetchDashboard(attempt + 1), 20_000);
         } else {
-          // First attempt failed — likely Render cold start. Show "acordando" and retry in 10 s.
-          console.warn("Dashboard falhou, tentando novamente em 10 s...", err?.message);
-          setWaking(true);
-          setLoadError(false);
-          setTimeout(() => fetchDashboard(true), 10_000);
+          setLoading(false);
         }
       });
   }
@@ -202,12 +188,25 @@ export function HomePage() {
   useEffect(() => {
     fetchDashboard();
     // Auto-refresh every 90 s so indicators stay current
-    const interval = setInterval(() => fetchDashboard(), 90_000);
+    const interval = setInterval(() => {
+      getDashboardReport()
+        .then((res) => {
+          const data = res.data?.data;
+          if (data) {
+            setDashboard(data);
+            setHasData(true);
+          }
+        })
+        .catch(() => {});
+    }, 90_000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const summaryCards = useMemo(() => buildSummaryCards(dashboard), [dashboard]);
+  const summaryCards = useMemo(
+    () => buildSummaryCards(dashboard, loading && !hasData),
+    [dashboard, loading, hasData],
+  );
   const documentRows = useMemo(() => buildAlertRows(dashboard), [dashboard]);
   const maintenanceRows = useMemo(
     () => buildMaintenanceRows(dashboard),
@@ -266,15 +265,15 @@ export function HomePage() {
             </div>
             <div className="fg-home-kpis">
               <article>
-                <strong>{dashboard.agendamentos?.atrasados ?? 0}</strong>
+                <strong>{(loading && !hasData) ? "–" : (dashboard.agendamentos?.atrasados ?? 0)}</strong>
                 <span>Atrasados</span>
               </article>
               <article>
-                <strong>{dashboard.veiculos?.emRota ?? 0}</strong>
+                <strong>{(loading && !hasData) ? "–" : (dashboard.veiculos?.emRota ?? 0)}</strong>
                 <span>Em trânsito</span>
               </article>
               <article>
-                <strong>{dashboard.alertas?.pendentes ?? 0}</strong>
+                <strong>{(loading && !hasData) ? "–" : (dashboard.alertas?.pendentes ?? 0)}</strong>
                 <span>Alertas</span>
               </article>
             </div>
@@ -284,43 +283,15 @@ export function HomePage() {
         <div className="fg-home-section-head">
           <h3>
             Alertas Importantes
-            {loading && !waking && (
+            {loading && !hasData && (
               <span style={{ fontSize: 11, fontWeight: 400, color: "#94A3B8", marginLeft: 8 }}>
                 carregando…
               </span>
             )}
           </h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {waking && (
-              <span style={{ fontSize: 11, color: "#D97706", display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 14 }}>⏳</span>
-                Servidor iniciando, aguarde…
-              </span>
-            )}
-            {loadError && !waking && (
-              <span style={{ fontSize: 11, color: "#DC2626" }}>
-                Erro — clique em Atualizar
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => fetchDashboard()}
-              disabled={loading || waking}
-              style={{
-                background: "none", border: "none",
-                cursor: (loading || waking) ? "default" : "pointer",
-                color: (loading || waking) ? "#94A3B8" : "var(--sf-primary)",
-                fontSize: 12, fontWeight: 600, padding: "2px 6px",
-                borderRadius: 6, transition: "background 0.15s",
-              }}
-              title="Atualizar indicadores"
-            >
-              ↻ Atualizar
-            </button>
-            <button type="button" onClick={() => navigate("/alertas")}>
-              Ver todos
-            </button>
-          </div>
+          <button type="button" onClick={() => navigate("/alertas")}>
+            Ver todos
+          </button>
         </div>
 
         <section className="fg-home-summary-grid">
