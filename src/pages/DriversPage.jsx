@@ -6,6 +6,7 @@ import { AppHeader } from "../components/AppHeader";
 import { AppIcon } from "../components/AppIcon";
 import { EmptyState } from "../components/ui/EmptyState";
 import { getDrivers, deleteDriver } from "../services/drivers";
+import { getVehicles } from "../services/vehicles";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { AdicionarMotoristaModal } from "../components/AdicionarMotoristaModal";
 
@@ -84,14 +85,31 @@ export function DriversPage() {
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("Todos");
   const [viewMode, setViewMode] = useState("table");
+  const [vehicleMap, setVehicleMap] = useState({});
 
-  // Carregar motoristas da API
+  // Carregar motoristas e veículos da API
   useEffect(() => {
-    getDrivers({ limit: 100 })
-      .then((res) => {
-        const data = res.data?.data ?? [];
+    Promise.all([
+      getDrivers({ limit: 100 }),
+      getVehicles({ limit: 100 }),
+    ])
+      .then(([driverRes, vehicleRes]) => {
+        const vehicleData = vehicleRes.data?.data ?? [];
+        // Build map: motorista_id → vehicle info
+        const map = {};
+        vehicleData.forEach((v) => {
+          const mid = v.motoristaId || v.motorista_id || v.motorista?.id;
+          if (mid) {
+            map[mid] = {
+              placa: v.placa || v.plate || "",
+              modelo: v.modelo || v.model || "",
+              status: v.status || "ATIVO",
+            };
+          }
+        });
         startTransition(() => {
-          setDrivers(data.map(normalizeDriver));
+          setVehicleMap(map);
+          setDrivers((driverRes.data?.data ?? []).map(normalizeDriver));
         });
       })
       .catch((err) => {
@@ -374,7 +392,16 @@ export function DriversPage() {
                           {driver.status}
                         </span>
                       </td>
-                      <td>{driver.vehicle}</td>
+                      <td>
+                        {vehicleMap[driver.id] ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                            <strong style={{ fontSize: 13 }}>{vehicleMap[driver.id].modelo}</strong>
+                            <span style={{ fontSize: 11, fontFamily: "monospace", color: "#64748B" }}>{vehicleMap[driver.id].placa}</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: "#94A3B8", fontSize: 12 }}>Sem veículo</span>
+                        )}
+                      </td>
                       <td>
                         <div className="fg-driver-actions">
                           <button

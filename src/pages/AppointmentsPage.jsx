@@ -543,7 +543,7 @@ export function AppointmentsPage() {
                   title="Nenhum agendamento encontrado"
                   description="Ajuste os filtros ou crie um novo agendamento para sua frota."
                   actionLabel="Novo agendamento"
-                  onAction={() => setActiveFilter("todos")}
+                  onAction={abrirModal}
                 />
               ) : null}
             </section>

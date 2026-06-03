@@ -51,6 +51,9 @@ function RouteFormModal({ open, onClose, onSaved, initialValues, veiculos, loadi
   const [form, setForm] = useState(DEFAULT_FORM);
   const [errors, setErrors] = useState({});
 
+  const selectedVehicle = veiculos.find((v) => v.id === form.veiculoId) || null;
+  const selectedVehicleHasDriver = Boolean(selectedVehicle?.motoristaId || selectedVehicle?.motorista_id || selectedVehicle?.motorista?.id);
+
   useEffect(() => {
     if (!open) return;
     if (initialValues) {
@@ -78,6 +81,9 @@ function RouteFormModal({ open, onClose, onSaved, initialValues, veiculos, loadi
     if (!form.veiculoId) e.veiculoId = "Selecione um veículo";
     if (!form.origem.trim()) e.origem = "Origem é obrigatória";
     if (!form.destino.trim()) e.destino = "Destino é obrigatório";
+    if (form.status === "EM_ANDAMENTO" && !selectedVehicleHasDriver) {
+      e.veiculoId = "O veículo selecionado não possui motorista. Vincule um motorista antes de iniciar a rota.";
+    }
     return e;
   }
 

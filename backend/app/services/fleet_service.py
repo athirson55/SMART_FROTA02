@@ -7,6 +7,22 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.fleet import Driver, Vehicle, VehiclePendencia
 
 
+def _tz(dt):
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _resolve_auto_alert_fp(db: Session, fingerprint: str, now: datetime) -> None:
+    from app.models.operations import Alert
+    for a in db.scalars(
+        select(Alert).where(Alert.observacao == fingerprint, Alert.status != "RESOLVIDO")
+    ).all():
+        a.status = "RESOLVIDO"
+        a.resolvido_em = now
+        db.add(a)
+
+
 def normalize_text(value: str | None) -> str:
     return (value or "").strip()
 
@@ -129,6 +145,8 @@ def create_driver(db: Session, data: dict) -> Driver:
 
 
 def update_driver(db: Session, driver: Driver, data: dict) -> Driver:
+    old_cnh_vencimento = driver.cnh_vencimento
+
     if data.get("email"):
         email = normalize_text(data["email"]).lower()
         existing = db.scalar(select(Driver).where(Driver.email == email, Driver.id != driver.id))
@@ -153,6 +171,15 @@ def update_driver(db: Session, driver: Driver, data: dict) -> Driver:
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(driver, field, normalize_text(data[key]) if isinstance(data[key], str) else data[key])
+
+    # Auto-resolve CNH alert if vencimento updated to a safe future date (>30 days)
+    new_cnh_ven = driver.cnh_vencimento
+    if new_cnh_ven and new_cnh_ven != old_cnh_vencimento:
+        exp = _tz(new_cnh_ven)
+        now = datetime.now(timezone.utc)
+        if exp and (exp - now).days > 30:
+            _resolve_auto_alert_fp(db, f"auto::cnh::{driver.id}", now)
+
     db.add(driver)
     db.commit()
     db.refresh(driver)
@@ -204,6 +231,8 @@ def create_vehicle(db: Session, data: dict) -> Vehicle:
     placa = normalize_text(data["placa"]).upper().replace("-", "").replace(" ", "")
     chassi = normalize_text(data.get("chassi")) or None
     motorista_id = data.get("motoristaId") or None
+    if int(data.get("km") or 0) < 0:
+        raise HTTPException(status_code=422, detail="Quilometragem não pode ser negativa")
     _validate_vehicle_uniques(db, placa=placa, chassi=chassi)
     vehicle = Vehicle(
         modelo=normalize_text(data["modelo"]),
@@ -229,6 +258,13 @@ def create_vehicle(db: Session, data: dict) -> Vehicle:
 
 
 def update_vehicle(db: Session, vehicle: Vehicle, data: dict) -> Vehicle:
+    # Capture old values before changes for alert reconciliation
+    old_crlv = vehicle.vencimento_crlv
+    old_seguro = vehicle.vencimento_seguro
+    old_rev_km = vehicle.proxima_revisao_km
+    old_rev_data = vehicle.proxima_revisao_data
+    old_km = vehicle.km
+
     if data.get("placa"):
         placa = normalize_text(data["placa"]).upper().replace("-", "").replace(" ", "")
         _validate_vehicle_uniques(db, placa=placa, vehicle_id=vehicle.id)
@@ -255,6 +291,36 @@ def update_vehicle(db: Session, vehicle: Vehicle, data: dict) -> Vehicle:
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(vehicle, field, data[key])
+
+    now = datetime.now(timezone.utc)
+
+    # Auto-resolve CRLV alert if renewed to safe future date (>30 days)
+    new_crlv = vehicle.vencimento_crlv
+    if new_crlv and new_crlv != old_crlv:
+        exp = _tz(new_crlv)
+        if exp and (exp - now).days > 30:
+            _resolve_auto_alert_fp(db, f"auto::crlv::{vehicle.id}", now)
+
+    # Auto-resolve seguro alert if renewed to safe future date
+    new_seguro = vehicle.vencimento_seguro
+    if new_seguro and new_seguro != old_seguro:
+        exp = _tz(new_seguro)
+        if exp and (exp - now).days > 30:
+            _resolve_auto_alert_fp(db, f"auto::seguro::{vehicle.id}", now)
+
+    # Auto-resolve revisão km alert if target km moved far ahead
+    new_rev_km = vehicle.proxima_revisao_km
+    current_km = vehicle.km
+    if new_rev_km is not None and new_rev_km != old_rev_km and new_rev_km > current_km + 2000:
+        _resolve_auto_alert_fp(db, f"auto::revisao_km::{vehicle.id}", now)
+
+    # Auto-resolve revisão data alert if updated to safe future date (>7 days)
+    new_rev_data = vehicle.proxima_revisao_data
+    if new_rev_data and new_rev_data != old_rev_data:
+        exp = _tz(new_rev_data)
+        if exp and (exp - now).days > 7:
+            _resolve_auto_alert_fp(db, f"auto::revisao_data::{vehicle.id}", now)
+
     db.add(vehicle)
     db.commit()
     db.refresh(vehicle)

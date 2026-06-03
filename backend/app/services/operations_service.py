@@ -187,8 +187,21 @@ def update_maintenance(db: Session, item: Maintenance, data: dict) -> Maintenanc
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(item, field, data[key])
-    # When a maintenance is completed, resolve linked pendências and alerts
+    # When a maintenance is completed, resolve linked pendências, alerts, and auto-alerts
     new_status = (data.get("status") or old_status or "").upper()
+    if new_status == "CONCLUIDA" and old_status != "CONCLUIDA":
+        now_ts = datetime.now(timezone.utc)
+        # Resolve fingerprinted auto-alert for this maintenance
+        fp_alert = db.scalar(
+            select(Alert).where(
+                Alert.observacao == f"auto::manutencao::{item.id}",
+                Alert.status != "RESOLVIDO",
+            )
+        )
+        if fp_alert:
+            fp_alert.status = "RESOLVIDO"
+            fp_alert.resolvido_em = now_ts
+            db.add(fp_alert)
     if new_status == "CONCLUIDA" and old_status != "CONCLUIDA":
         now = datetime.now(timezone.utc)
         # Resolve pendências linked by source_id
@@ -273,6 +286,7 @@ def create_appointment(db: Session, data: dict) -> Appointment:
 
 
 def update_appointment(db: Session, item: Appointment, data: dict) -> Appointment:
+    old_status = item.status
     if data.get("veiculoId"):
         item.vehicle_id = _find_vehicle(db, data["veiculoId"]).id
     mapping = {
@@ -288,6 +302,20 @@ def update_appointment(db: Session, item: Appointment, data: dict) -> Appointmen
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(item, field, data[key])
+    # When appointment is completed, resolve its fingerprinted auto-alert
+    new_status = (item.status or "").upper()
+    if new_status in ("CONCLUIDA", "CONCLUIDO") and (old_status or "").upper() not in ("CONCLUIDA", "CONCLUIDO"):
+        now_ts = datetime.now(timezone.utc)
+        fp_alert = db.scalar(
+            select(Alert).where(
+                Alert.observacao == f"auto::agendamento::{item.id}",
+                Alert.status != "RESOLVIDO",
+            )
+        )
+        if fp_alert:
+            fp_alert.status = "RESOLVIDO"
+            fp_alert.resolvido_em = now_ts
+            db.add(fp_alert)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -422,6 +450,99 @@ def unresolve_alert(db: Session, item: Alert) -> Alert:
 
 def delete_alert(db: Session, item: Alert) -> None:
     db.delete(item)
+    db.commit()
+
+
+def _reconcile_auto_alerts(db: Session, vehicles: list, drivers: list, now) -> None:
+    """Resolve existing auto-alerts whose underlying condition no longer applies."""
+    def _tz(dt):
+        if dt is None:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    def _resolve(fp: str):
+        for a in db.scalars(
+            select(Alert).where(Alert.observacao == fp, Alert.status != "RESOLVIDO")
+        ).all():
+            a.status = "RESOLVIDO"
+            a.resolvido_em = now
+            db.add(a)
+
+    # Vehicles: CRLV, seguro, revisão km/data
+    for v in vehicles:
+        exp = _tz(v.vencimento_crlv)
+        if exp and (exp - now).days > 30:
+            _resolve(f"auto::crlv::{v.id}")
+
+        exp = _tz(v.vencimento_seguro)
+        if exp and (exp - now).days > 30:
+            _resolve(f"auto::seguro::{v.id}")
+
+        if v.proxima_revisao_km is not None and (v.proxima_revisao_km - v.km) > 2000:
+            _resolve(f"auto::revisao_km::{v.id}")
+
+        exp = _tz(v.proxima_revisao_data)
+        if exp and (exp - now).days > 7:
+            _resolve(f"auto::revisao_data::{v.id}")
+
+    # Drivers: CNH
+    for drv in drivers:
+        exp = _tz(drv.cnh_vencimento)
+        if exp and (exp - now).days > 30:
+            _resolve(f"auto::cnh::{drv.id}")
+
+    # Maintenances: resolve if now CONCLUIDA
+    overdue_fps = db.scalars(
+        select(Alert.observacao).where(
+            Alert.observacao.like("auto::manutencao::%"),
+            Alert.status != "RESOLVIDO",
+        )
+    ).all()
+    for fp in overdue_fps:
+        maint_id = fp.split("::")[-1]
+        maint = db.get(Maintenance, maint_id)
+        if maint and maint.status == "CONCLUIDA":
+            _resolve(fp)
+
+    # Appointments: resolve if now CONCLUIDA
+    appt_fps = db.scalars(
+        select(Alert.observacao).where(
+            Alert.observacao.like("auto::agendamento::%"),
+            Alert.status != "RESOLVIDO",
+        )
+    ).all()
+    for fp in appt_fps:
+        appt_id = fp.split("::")[-1]
+        appt = db.get(Appointment, appt_id)
+        if appt and appt.status in ("CONCLUIDA", "CONCLUIDO"):
+            _resolve(fp)
+
+    # Routes: resolve if no longer EM_ANDAMENTO
+    route_fps = db.scalars(
+        select(Alert.observacao).where(
+            Alert.observacao.like("auto::rota::%"),
+            Alert.status != "RESOLVIDO",
+        )
+    ).all()
+    for fp in route_fps:
+        route_id = fp.split("::")[-1]
+        route = db.get(Route, route_id)
+        if route and route.status in ("CONCLUIDA", "CANCELADA"):
+            _resolve(fp)
+
+    # Pendencias: resolve if the pendencia is now resolved
+    pend_fps = db.scalars(
+        select(Alert.observacao).where(
+            Alert.observacao.like("auto::pendencia::%"),
+            Alert.status != "RESOLVIDO",
+        )
+    ).all()
+    for fp in pend_fps:
+        pend_id = fp.split("::")[-1]
+        pend = db.get(VehiclePendencia, pend_id)
+        if pend and pend.resolved_at is not None:
+            _resolve(fp)
+
     db.commit()
 
 
@@ -664,6 +785,9 @@ def generate_auto_alerts(db: Session) -> list[Alert]:
     for a in created:
         db.refresh(a)
 
+    # ── Reconciliar: resolver alertas cujas condições já não se aplicam ──
+    _reconcile_auto_alerts(db, vehicles, drivers, now)
+
     # ── Enviar e-mail para alertas críticos novos ────────────────────────
     criticos = [a for a in created if a.prioridade == "CRITICO"]
     if criticos:
@@ -805,15 +929,66 @@ def get_route(db: Session, route_id: str) -> Route:
     return item
 
 
+def _sync_vehicle_driver_status(db: Session, route: Route, old_status: str, new_status: str) -> None:
+    """Keep vehicle and driver status in sync with route status transitions."""
+    old = (old_status or "").upper()
+    new = (new_status or "").upper()
+
+    if new == "EM_ANDAMENTO" and old != "EM_ANDAMENTO":
+        if route.vehicle_id:
+            v = db.get(Vehicle, route.vehicle_id)
+            if v:
+                v.status = "EM_ROTA"
+                db.add(v)
+        drv_id = route.motorista_id
+        if drv_id:
+            d = db.get(Driver, drv_id)
+            if d:
+                d.status = "EM_ROTA"
+                db.add(d)
+
+    elif new in ("CONCLUIDA", "CANCELADA") and old == "EM_ANDAMENTO":
+        if route.vehicle_id:
+            other_active = db.scalar(
+                select(func.count()).select_from(Route).where(
+                    Route.vehicle_id == route.vehicle_id,
+                    Route.status == "EM_ANDAMENTO",
+                    Route.id != route.id,
+                )
+            ) or 0
+            if other_active == 0:
+                v = db.get(Vehicle, route.vehicle_id)
+                if v and v.status == "EM_ROTA":
+                    v.status = "ATIVO"
+                    db.add(v)
+        drv_id = route.motorista_id
+        if drv_id:
+            other_driver = db.scalar(
+                select(func.count()).select_from(Route).where(
+                    Route.motorista_id == drv_id,
+                    Route.status == "EM_ANDAMENTO",
+                    Route.id != route.id,
+                )
+            ) or 0
+            if other_driver == 0:
+                d = db.get(Driver, drv_id)
+                if d and d.status == "EM_ROTA":
+                    d.status = "DISPONIVEL"
+                    db.add(d)
+
+
 def create_route(db: Session, data: dict) -> Route:
     vehicle = _find_vehicle(db, data["veiculoId"])
     motorista_id = data.get("motoristaId") or vehicle.motorista_id or None
+    route_status = data.get("status") or "PENDENTE"
+    if route_status.upper() == "EM_ANDAMENTO" and not motorista_id:
+        raise HTTPException(status_code=422, detail="Uma rota em andamento requer motorista designado")
     item = Route(
         vehicle_id=vehicle.id,
         motorista_id=motorista_id,
         origem=data["origem"].strip(),
         destino=data["destino"].strip(),
-        status=data.get("status") or "PENDENTE",
+        status=route_status,
         data_inicio=data.get("dataInicio"),
         data_fim=data.get("dataFim"),
         distancia_km=data.get("distanciaKm"),
@@ -822,10 +997,14 @@ def create_route(db: Session, data: dict) -> Route:
     db.add(item)
     db.commit()
     db.refresh(item)
+    _sync_vehicle_driver_status(db, item, "PENDENTE", route_status)
+    db.commit()
+    db.refresh(item)
     return item
 
 
 def update_route(db: Session, item: Route, data: dict) -> Route:
+    old_status = item.status or "PENDENTE"
     if data.get("veiculoId"):
         item.vehicle_id = _find_vehicle(db, data["veiculoId"]).id
     mapping = {
@@ -841,11 +1020,17 @@ def update_route(db: Session, item: Route, data: dict) -> Route:
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(item, field, data[key])
+    new_status = (item.status or "PENDENTE").upper()
+    if new_status == "EM_ANDAMENTO" and not item.motorista_id:
+        raise HTTPException(status_code=422, detail="Uma rota em andamento requer motorista designado")
     if item.status == "EM_ANDAMENTO" and item.data_inicio is None:
         item.data_inicio = datetime.now(timezone.utc)
     if item.status in ("CONCLUIDA", "CANCELADA") and item.data_fim is None:
         item.data_fim = datetime.now(timezone.utc)
     db.add(item)
+    db.commit()
+    db.refresh(item)
+    _sync_vehicle_driver_status(db, item, old_status, new_status)
     db.commit()
     db.refresh(item)
     return item

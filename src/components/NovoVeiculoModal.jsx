@@ -9,6 +9,18 @@ const STATUS_OPTS = [
   { value: "MANUTENCAO", label: "Em manutenção" },
   { value: "INATIVO", label: "Inativo" },
 ];
+
+const STATUS_DISPLAY_TO_DB = {
+  Ativo: "ATIVO",
+  "Em rota": "EM_ROTA",
+  "Em manutenção": "MANUTENCAO",
+  Reserva: "INATIVO",
+  Inativo: "INATIVO",
+};
+
+function toDbStatus(val) {
+  return STATUS_DISPLAY_TO_DB[val] || val || "ATIVO";
+}
 const TIPO_OPTS = [
   { value: "", label: "Selecione..." },
   { value: "Caminhão leve", label: "Caminhão leve" },
@@ -76,7 +88,7 @@ export function NovoVeiculoModal({
           marca: initialValues.marca || "",
           placa: initialValues.placa || initialValues.plate || "",
           ano: String(initialValues.ano || currentYear),
-          status: initialValues.status || "ATIVO",
+          status: toDbStatus(initialValues.status),
           combustivel: initialValues.combustivel || "DIESEL",
           chassi: initialValues.chassi || "",
           km: String(initialValues.km ?? ""),
@@ -106,11 +118,17 @@ export function NovoVeiculoModal({
     if (!form.placa.trim()) e.placa = "Placa é obrigatória";
     if (form.placa.trim().length < 5)
       e.placa = "Placa inválida (mínimo 5 caracteres)";
-    if (
-      form.ano &&
-      (Number(form.ano) < 1980 || Number(form.ano) > currentYear + 1)
-    )
+    if (form.ano && (Number(form.ano) < 1980 || Number(form.ano) > currentYear + 1))
       e.ano = "Ano inválido";
+    if (form.km !== "" && Number(form.km) < 0)
+      e.km = "Quilometragem não pode ser negativa";
+    if (form.proximaRevisaoKm !== "" && Number(form.proximaRevisaoKm) < 0)
+      e.proximaRevisaoKm = "Valor não pode ser negativo";
+    const today = new Date().toISOString().slice(0, 10);
+    if (form.vencimentoCRLV && form.vencimentoCRLV < today)
+      e.vencimentoCRLV = "Data de vencimento do CRLV está no passado";
+    if (form.vencimentoSeguro && form.vencimentoSeguro < today)
+      e.vencimentoSeguro = "Data de vencimento do seguro está no passado";
     return e;
   }
 
@@ -280,11 +298,12 @@ export function NovoVeiculoModal({
             <input
               type="number"
               min="0"
-              className="sf-input"
+              className={`sf-input ${errors.km ? "is-error" : ""}`}
               placeholder="Ex: 87420"
               value={form.km}
               onChange={(e) => set("km", e.target.value)}
             />
+            {errors.km && <span className="sf-field-error">{errors.km}</span>}
           </div>
 
           <div className="sf-field">
@@ -342,20 +361,22 @@ export function NovoVeiculoModal({
             <label className="sf-label">Vencimento do CRLV</label>
             <input
               type="date"
-              className="sf-input"
+              className={`sf-input ${errors.vencimentoCRLV ? "is-error" : ""}`}
               value={form.vencimentoCRLV}
               onChange={(e) => set("vencimentoCRLV", e.target.value)}
             />
+            {errors.vencimentoCRLV && <span className="sf-field-error">{errors.vencimentoCRLV}</span>}
           </div>
 
           <div className="sf-field">
             <label className="sf-label">Vencimento do seguro</label>
             <input
               type="date"
-              className="sf-input"
+              className={`sf-input ${errors.vencimentoSeguro ? "is-error" : ""}`}
               value={form.vencimentoSeguro}
               onChange={(e) => set("vencimentoSeguro", e.target.value)}
             />
+            {errors.vencimentoSeguro && <span className="sf-field-error">{errors.vencimentoSeguro}</span>}
           </div>
 
           <span className="sf-section-label">Próxima revisão</span>
@@ -365,11 +386,12 @@ export function NovoVeiculoModal({
             <input
               type="number"
               min="0"
-              className="sf-input"
+              className={`sf-input ${errors.proximaRevisaoKm ? "is-error" : ""}`}
               placeholder="Ex: 100000"
               value={form.proximaRevisaoKm}
               onChange={(e) => set("proximaRevisaoKm", e.target.value)}
             />
+            {errors.proximaRevisaoKm && <span className="sf-field-error">{errors.proximaRevisaoKm}</span>}
           </div>
 
           <div className="sf-field">
