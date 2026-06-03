@@ -942,10 +942,20 @@
   border-radius: 12px;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   padding: 18px;
-  /* flex column: description grows → KPI + footer always same distance from bottom */
-  display: flex;
-  flex-direction: column;
-  /* no min-height: grid row already stretches all siblings to the same height */
+  /*
+   * CSS Grid with 4 explicit rows:
+   *   auto  → title row  (grows with content)
+   *   1fr   → description (fills ALL remaining height)
+   *   auto  → KPI number  (always same distance from bottom)
+   *   auto  → footer      (always same distance from bottom)
+   *
+   * The outer .fg-home-summary-grid has align-items:stretch, making all
+   * sibling cards the same height. The 1fr row then absorbs whatever
+   * extra height the tallest card introduces, locking KPI and footer to
+   * a consistent vertical position across every card in the same row.
+   */
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
   transition:
     transform 0.2s ease,
     box-shadow 0.2s ease,
@@ -962,7 +972,7 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  flex-shrink: 0;
+  align-self: start; /* stay at top of its grid row */
 }
 .fg-home-summary-title-row h4 {
   min-width: 0;
@@ -993,50 +1003,49 @@
   letter-spacing: -0.01em;
 }
 
-/* ── SLOT 2: description — flex-1 absorbs all remaining height ── */
+/* ── SLOT 2: description — grid 1fr row auto-sizes this ── */
 .fg-home-summary-card p {
   margin: 10px 0 0;
   font-size: 11px;
   line-height: 1.55;
   color: #7d8898;
-  /* fills available space → KPI + footer land at consistent vertical position */
-  flex: 1 1 auto;
-  min-height: 48px;   /* at least 3 visual lines to prevent collapse */
+  align-self: start;  /* text sits at top of the 1fr row */
+  min-height: 44px;   /* visual floor so very short descriptions don't collapse */
 }
 
-/* ── SLOT 3: KPI number — fixed below description ── */
+/* ── SLOT 3: KPI number — always at the same distance from the bottom ── */
 .fg-home-summary-value {
   display: block;
-  /* NO margin-top: auto — the paragraph's flex-1 already pushes KPI down */
   margin: 12px 0 10px;
   font-size: 18px;
   line-height: 1;
   font-weight: 600;
-  flex-shrink: 0;
+  align-self: end; /* sit at the bottom of its auto row */
 }
 .fg-home-summary-value.is-gold   { color: #c47f0f; }
 .fg-home-summary-value.is-red    { color: #d23d36; }
 .fg-home-summary-value.is-purple { color: #7e45d5; }
 .fg-home-summary-value.is-green  { color: #1f9d52; }
 
-/* ── SLOT 4: footer (tags + action link) — always at card bottom ── */
+/* ── SLOT 4: footer — tags left, action right, NEVER wraps ── */
 .fg-home-summary-footer {
-  flex-shrink: 0;
   border-top: 1px solid #eceff4;
   padding-top: 9px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px 8px;
-  /* NO margin-top: auto — paragraph's flex-1 already handles spacing */
+  flex-wrap: nowrap; /* single line always — prevents footer height differences */
+  gap: 8px;
+  align-self: end;   /* stick to bottom of its grid row */
+  overflow: hidden;
 }
 .fg-home-tag-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  flex-wrap: nowrap; /* tags never wrap */
+  gap: 4px;
   min-width: 0;
   flex: 1 1 auto;
+  overflow: hidden;
 }
 .fg-home-tag-list span {
   height: 22px;
@@ -1045,7 +1054,12 @@
   display: inline-flex;
   align-items: center;
   font-size: 10px;
+  /* truncate long tag text rather than wrapping */
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
   color: #c35f5f;
   background: #fae5e5;
 }
@@ -1339,6 +1353,7 @@
 }
 .fg-dashboard-insights .fg-home-summary-card {
   padding: 12px;
+  /* grid-template-rows inherited from .fg-home-summary-card */
 }
 .fg-dashboard-insights .fg-home-summary-card h4 {
   margin: 0;
@@ -1349,7 +1364,7 @@
   margin: 6px 0 0;
   font-size: 12px;
   color: #5f6d7e;
-  min-height: 36px;
+  min-height: 28px;
 }
 
 .fg-dashboard-toolbar {

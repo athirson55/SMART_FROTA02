@@ -82,7 +82,7 @@ function buildSummaryCards(report) {
       valueClass: "is-purple",
       tags: [
         `${report.agendamentos?.atrasados ?? 0} atrasados`,
-        `${report.agendamentos?.proximos ?? 0} próximos (7 dias)`,
+        `${report.agendamentos?.proximos ?? 0} próximos`,
       ],
       action: "Acompanhar",
       route: "/agendamentos",
