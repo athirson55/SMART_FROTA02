@@ -17,12 +17,12 @@ const API_BASE_URL =
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 12000,
+  timeout: 45000, // 45 s — covers Render free-tier cold start (~30-60 s)
 });
 
 const refreshApi = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 12000,
+  timeout: 45000,
 });
 
 let refreshingPromise = null;

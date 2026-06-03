@@ -149,6 +149,7 @@ export function HomePage() {
   const [summaryModal, setSummaryModal] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [waking, setWaking] = useState(false);
   const [dashboard, setDashboard] = useState({
     veiculos: {},
     motoristas: {},
@@ -161,30 +162,47 @@ export function HomePage() {
 
   const displayName = user?.nome || user?.name || "Usuário";
 
-  function fetchDashboard() {
-    setLoading(true);
-    setLoadError(false);
+  function fetchDashboard(isRetry = false) {
+    if (!isRetry) {
+      setLoading(true);
+      setLoadError(false);
+      setWaking(false);
+    }
+
     getDashboardReport()
       .then((res) => {
         const data = res.data?.data;
         if (data) {
           setDashboard(data);
           setLoadError(false);
+          setWaking(false);
         } else {
           setLoadError(true);
+          setWaking(false);
         }
+        setLoading(false);
       })
       .catch((err) => {
-        console.error("Erro ao carregar dashboard:", err);
-        setLoadError(true);
-      })
-      .finally(() => setLoading(false));
+        if (isRetry) {
+          // Second attempt also failed
+          console.error("Erro ao carregar dashboard (retry):", err);
+          setLoadError(true);
+          setWaking(false);
+          setLoading(false);
+        } else {
+          // First attempt failed — likely Render cold start. Show "acordando" and retry in 10 s.
+          console.warn("Dashboard falhou, tentando novamente em 10 s...", err?.message);
+          setWaking(true);
+          setLoadError(false);
+          setTimeout(() => fetchDashboard(true), 10_000);
+        }
+      });
   }
 
   useEffect(() => {
     fetchDashboard();
-    // Auto-refresh every 60 s so indicators stay current
-    const interval = setInterval(fetchDashboard, 60_000);
+    // Auto-refresh every 90 s so indicators stay current
+    const interval = setInterval(() => fetchDashboard(), 90_000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -266,27 +284,34 @@ export function HomePage() {
         <div className="fg-home-section-head">
           <h3>
             Alertas Importantes
-            {loading && (
+            {loading && !waking && (
               <span style={{ fontSize: 11, fontWeight: 400, color: "#94A3B8", marginLeft: 8 }}>
-                atualizando…
+                carregando…
               </span>
             )}
           </h3>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {loadError && (
+            {waking && (
+              <span style={{ fontSize: 11, color: "#D97706", display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 14 }}>⏳</span>
+                Servidor iniciando, aguarde…
+              </span>
+            )}
+            {loadError && !waking && (
               <span style={{ fontSize: 11, color: "#DC2626" }}>
-                Erro ao carregar dados
+                Erro — clique em Atualizar
               </span>
             )}
             <button
               type="button"
-              onClick={fetchDashboard}
-              disabled={loading}
+              onClick={() => fetchDashboard()}
+              disabled={loading || waking}
               style={{
-                background: "none", border: "none", cursor: loading ? "default" : "pointer",
-                color: loading ? "#94A3B8" : "var(--sf-primary)", fontSize: 12,
-                fontWeight: 600, padding: "2px 6px", borderRadius: 6,
-                transition: "background 0.15s",
+                background: "none", border: "none",
+                cursor: (loading || waking) ? "default" : "pointer",
+                color: (loading || waking) ? "#94A3B8" : "var(--sf-primary)",
+                fontSize: 12, fontWeight: 600, padding: "2px 6px",
+                borderRadius: 6, transition: "background 0.15s",
               }}
               title="Atualizar indicadores"
             >
