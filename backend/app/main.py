@@ -50,20 +50,23 @@ async def lifespan(app: FastAPI):
                 db.close()
         except Exception as exc:
             logger.warning("Nao foi possivel semear o banco no startup: %s", exc)
-    # Reconcile historical status inconsistencies on every startup
+    # Normalize status values and reconcile route statuses on every startup
     try:
-        from app.services.reconciliation_service import reconcile_route_statuses
+        from app.services.reconciliation_service import normalize_statuses, reconcile_route_statuses
         db = SessionLocal()
         try:
-            stats = reconcile_route_statuses(db)
+            norm = normalize_statuses(db)
+            route = reconcile_route_statuses(db)
             logger.info(
-                "Startup reconciliation: veiculos_corrigidos=%d, motoristas_corrigidos=%d, rotas_verificadas=%d",
-                stats["vehicles_fixed"], stats["drivers_fixed"], stats["routes_checked"],
+                "Startup normalization: veiculos=%d, motoristas=%d | "
+                "reconciliation: veiculos=%d, motoristas=%d, rotas=%d",
+                norm["vehicles_normalized"], norm["drivers_normalized"],
+                route["vehicles_fixed"], route["drivers_fixed"], route["routes_checked"],
             )
         finally:
             db.close()
     except Exception as exc:
-        logger.warning("Nao foi possivel reconciliar status no startup: %s", exc)
+        logger.warning("Nao foi possivel normalizar/reconciliar no startup: %s", exc)
     yield
 
 

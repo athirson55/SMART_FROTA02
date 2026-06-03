@@ -71,7 +71,8 @@
       "Bash(dir src\\\\data)",
       "Bash(rm -f src/data/vehicles.js src/data/drivers.js src/data/fleetDashboard.js)",
       "Bash(ls src/data/)",
-      "Bash(python -c \"from app.database.init_db import seed_database; print\\('init_db OK'\\)\")"
+      "Bash(python -c \"from app.database.init_db import seed_database; print\\('init_db OK'\\)\")",
+      "Bash(python -c \"from app.services.reconciliation_service import normalize_statuses, run_full_reconciliation; print\\('OK'\\)\")"
     ]
   }
 }

@@ -13,6 +13,60 @@ from sqlalchemy.orm import Session
 from app.models.fleet import Driver, Vehicle
 from app.models.operations import Alert, Appointment, Route
 
+# Display-format → DB-format maps (fixes data saved by the old status bug)
+_VEHICLE_STATUS_MAP = {
+    "Ativo": "ATIVO",
+    "ativo": "ATIVO",
+    "Em rota": "EM_ROTA",
+    "em rota": "EM_ROTA",
+    "Em manutenção": "MANUTENCAO",
+    "em manutenção": "MANUTENCAO",
+    "Manutenção": "MANUTENCAO",
+    "Reserva": "INATIVO",
+    "reserva": "INATIVO",
+    "Inativo": "INATIVO",
+    "inativo": "INATIVO",
+}
+
+_DRIVER_STATUS_MAP = {
+    "Disponível": "DISPONIVEL",
+    "disponível": "DISPONIVEL",
+    "Disponivel": "DISPONIVEL",
+    "Em rota": "EM_ROTA",
+    "em rota": "EM_ROTA",
+    "Afastado": "AFASTADO",
+    "afastado": "AFASTADO",
+    "Inativo": "INATIVO",
+    "inativo": "INATIVO",
+}
+
+
+def normalize_statuses(db: Session) -> dict:
+    """Convert any display-format status values back to DB-canonical uppercase form.
+
+    Vehicles saved while the old NovoVeiculoModal bug was active may have
+    status = 'Ativo' (display label) instead of 'ATIVO' (DB value). This
+    causes dashboard queries like `Vehicle.status == 'ATIVO'` to return 0.
+    """
+    stats = {"vehicles_normalized": 0, "drivers_normalized": 0}
+
+    for v in db.scalars(select(Vehicle)).all():
+        canonical = _VEHICLE_STATUS_MAP.get(v.status)
+        if canonical:
+            v.status = canonical
+            db.add(v)
+            stats["vehicles_normalized"] += 1
+
+    for d in db.scalars(select(Driver)).all():
+        canonical = _DRIVER_STATUS_MAP.get(d.status)
+        if canonical:
+            d.status = canonical
+            db.add(d)
+            stats["drivers_normalized"] += 1
+
+    db.commit()
+    return stats
+
 
 def reconcile_route_statuses(db: Session) -> dict:
     """Sync vehicle.status and driver.status with their EM_ANDAMENTO routes.
@@ -67,9 +121,11 @@ def reconcile_stale_alerts(db: Session) -> dict:
 
 def run_full_reconciliation(db: Session) -> dict:
     """Run all reconciliation steps and return a combined stats dict."""
+    norm_stats = normalize_statuses(db)
     route_stats = reconcile_route_statuses(db)
     alert_stats = reconcile_stale_alerts(db)
     return {
+        **norm_stats,
         **route_stats,
         **alert_stats,
         "reconciled_at": datetime.now(timezone.utc).isoformat(),

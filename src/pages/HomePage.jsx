@@ -147,6 +147,8 @@ export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [summaryModal, setSummaryModal] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [dashboard, setDashboard] = useState({
     veiculos: {},
     motoristas: {},
@@ -159,21 +161,32 @@ export function HomePage() {
 
   const displayName = user?.nome || user?.name || "Usuário";
 
-  useEffect(() => {
-    let active = true;
-
+  function fetchDashboard() {
+    setLoading(true);
+    setLoadError(false);
     getDashboardReport()
       .then((res) => {
-        if (!active) return;
-        setDashboard(res.data?.data ?? {});
+        const data = res.data?.data;
+        if (data) {
+          setDashboard(data);
+          setLoadError(false);
+        } else {
+          setLoadError(true);
+        }
       })
       .catch((err) => {
         console.error("Erro ao carregar dashboard:", err);
-      });
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
+  }
 
-    return () => {
-      active = false;
-    };
+  useEffect(() => {
+    fetchDashboard();
+    // Auto-refresh every 60 s so indicators stay current
+    const interval = setInterval(fetchDashboard, 60_000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const summaryCards = useMemo(() => buildSummaryCards(dashboard), [dashboard]);
@@ -251,10 +264,38 @@ export function HomePage() {
         </section>
 
         <div className="fg-home-section-head">
-          <h3>Alertas Importantes</h3>
-          <button type="button" onClick={() => navigate("/alertas")}>
-            Ver todos
-          </button>
+          <h3>
+            Alertas Importantes
+            {loading && (
+              <span style={{ fontSize: 11, fontWeight: 400, color: "#94A3B8", marginLeft: 8 }}>
+                atualizando…
+              </span>
+            )}
+          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {loadError && (
+              <span style={{ fontSize: 11, color: "#DC2626" }}>
+                Erro ao carregar dados
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={fetchDashboard}
+              disabled={loading}
+              style={{
+                background: "none", border: "none", cursor: loading ? "default" : "pointer",
+                color: loading ? "#94A3B8" : "var(--sf-primary)", fontSize: 12,
+                fontWeight: 600, padding: "2px 6px", borderRadius: 6,
+                transition: "background 0.15s",
+              }}
+              title="Atualizar indicadores"
+            >
+              ↻ Atualizar
+            </button>
+            <button type="button" onClick={() => navigate("/alertas")}>
+              Ver todos
+            </button>
+          </div>
         </div>
 
         <section className="fg-home-summary-grid">
