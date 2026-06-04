@@ -1,12 +1,12 @@
 import "../styles/dashboard.css";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { AppIcon } from "../components/AppIcon";
 import { AppHeader } from "../components/AppHeader";
 import { QuickInfoModal } from "../components/QuickInfoModal";
 import { useAuth } from "../context/AuthContext";
-import { getDashboardReport } from "../services/reports";
+import { useDashboard } from "../context/DashboardContext";
 
 const quickActions = [
   {
@@ -149,59 +149,10 @@ function Row({ row }) {
 export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { dashboard, loading, hasData } = useDashboard();
   const [summaryModal, setSummaryModal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [hasData, setHasData] = useState(false);
-  const [dashboard, setDashboard] = useState({
-    veiculos: {},
-    motoristas: {},
-    manutencoes: {},
-    alertas: {},
-    agendamentos: {},
-    veiculosComPendencias: [],
-    alertasRecentes: [],
-  });
 
   const displayName = user?.nome || user?.name || "Usuário";
-
-  function fetchDashboard(attempt = 0) {
-    if (attempt === 0) setLoading(true);
-    getDashboardReport()
-      .then((res) => {
-        const data = res.data?.data;
-        if (data) {
-          setDashboard(data);
-          setHasData(true);
-        }
-        setLoading(false);
-      })
-      .catch(() => {
-        // Retry silently every 8 s up to 8x — catches Render cold-start (30-60 s) quickly
-        if (attempt < 8) {
-          setTimeout(() => fetchDashboard(attempt + 1), 8_000);
-        } else {
-          setLoading(false);
-        }
-      });
-  }
-
-  useEffect(() => {
-    fetchDashboard();
-    // Auto-refresh every 90 s so indicators stay current
-    const interval = setInterval(() => {
-      getDashboardReport()
-        .then((res) => {
-          const data = res.data?.data;
-          if (data) {
-            setDashboard(data);
-            setHasData(true);
-          }
-        })
-        .catch(() => {});
-    }, 90_000);
-    return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const summaryCards = useMemo(
     () => buildSummaryCards(dashboard, loading && !hasData),

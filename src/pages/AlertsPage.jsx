@@ -152,23 +152,23 @@ export function AlertsPage() {
   useEffect(() => {
     let active = true;
 
-    generateAutoAlerts().catch(() => {});
+    function applyAlerts(res) {
+      if (!active) return;
+      const data = res.data?.data ?? [];
+      const normalized = data.map(normalizeAlert);
+      setAlerts(normalized);
+      setActivity(buildActivityFromAlerts(normalized));
+    }
 
-    getAlerts({ limit: 100 })
-      .then((res) => {
-        if (!active) return;
-        const data = res.data?.data ?? [];
-        const normalized = data.map(normalizeAlert);
-        setAlerts(normalized);
-        setActivity(buildActivityFromAlerts(normalized));
-      })
-      .catch((err) => {
-        console.error("Erro ao carregar alertas:", err);
-        if (active) {
-          setAlerts([]);
-          setActivity([]);
-        }
-      });
+    // Load existing alerts immediately for fast first render
+    getAlerts({ limit: 100 }).then(applyAlerts).catch(() => {});
+
+    // Generate auto-alerts then reload the full list so newly created
+    // alerts appear without requiring a manual refresh
+    generateAutoAlerts()
+      .then(() => getAlerts({ limit: 100 }))
+      .then(applyAlerts)
+      .catch(() => {});
 
     return () => {
       active = false;

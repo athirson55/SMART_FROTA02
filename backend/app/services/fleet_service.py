@@ -134,7 +134,7 @@ def create_driver(db: Session, data: dict) -> Driver:
         cnh=cnh,
         cnh_categoria=normalize_text(data.get("cnhCategoria")) or "D",
         cnh_vencimento=data.get("cnhVencimento"),
-        status=normalize_text(data.get("status")) or "DISPONIVEL",
+        status=(normalize_text(data.get("status")) or "DISPONIVEL").upper(),
         cargo=normalize_text(data.get("cargo")) or "Motorista",
         avatar_cor=normalize_text(data.get("avatarCor")) or None,
     )
@@ -168,9 +168,13 @@ def update_driver(db: Session, driver: Driver, data: dict) -> Driver:
         "cargo": "cargo",
         "avatarCor": "avatar_cor",
     }
+    _driver_enum_fields = {"status"}
     for key, field in mapping.items():
         if key in data and data[key] is not None:
-            setattr(driver, field, normalize_text(data[key]) if isinstance(data[key], str) else data[key])
+            if key in _driver_enum_fields and isinstance(data[key], str):
+                setattr(driver, field, data[key].upper().strip())
+            else:
+                setattr(driver, field, normalize_text(data[key]) if isinstance(data[key], str) else data[key])
 
     # Auto-resolve CNH alert if vencimento updated to a safe future date (>30 days)
     new_cnh_ven = driver.cnh_vencimento
@@ -239,7 +243,7 @@ def create_vehicle(db: Session, data: dict) -> Vehicle:
         marca=normalize_text(data.get("marca")) or None,
         placa=placa,
         ano=data.get("ano"),
-        status=normalize_text(data.get("status")) or "ATIVO",
+        status=(normalize_text(data.get("status")) or "ATIVO").upper(),
         combustivel=normalize_text(data.get("combustivel")) or None,
         chassi=chassi,
         km=int(data.get("km") or 0),
@@ -255,6 +259,10 @@ def create_vehicle(db: Session, data: dict) -> Vehicle:
     db.commit()
     db.refresh(vehicle)
     return vehicle
+
+
+def _upper_if_str(value):
+    return value.upper().strip() if isinstance(value, str) else value
 
 
 def update_vehicle(db: Session, vehicle: Vehicle, data: dict) -> Vehicle:
@@ -288,9 +296,11 @@ def update_vehicle(db: Session, vehicle: Vehicle, data: dict) -> Vehicle:
         "proximaRevisaoKm": "proxima_revisao_km",
         "proximaRevisaoData": "proxima_revisao_data",
     }
+    _enum_fields = {"status"}
     for key, field in mapping.items():
         if key in data and data[key] is not None:
-            setattr(vehicle, field, data[key])
+            value = _upper_if_str(data[key]) if key in _enum_fields else data[key]
+            setattr(vehicle, field, value)
 
     now = datetime.now(timezone.utc)
 
