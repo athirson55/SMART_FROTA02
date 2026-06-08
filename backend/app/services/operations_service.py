@@ -153,6 +153,7 @@ def create_maintenance(db: Session, data: dict) -> Maintenance:
     if float(data.get("custo") or 0) < 0:
         raise HTTPException(status_code=422, detail="Custo não pode ser negativo")
     vehicle = _find_vehicle(db, data["veiculoId"])
+    m_status = (data.get("status") or "PENDENTE").upper()
     item = Maintenance(
         vehicle_id=vehicle.id,
         tipo=data.get("tipo") or "PREVENTIVA",
@@ -160,7 +161,7 @@ def create_maintenance(db: Session, data: dict) -> Maintenance:
         data=data["data"],
         km=int(data.get("km") or 0),
         custo=float(data.get("custo") or 0),
-        status=data.get("status") or "PENDENTE",
+        status=m_status,
         prioridade=data.get("prioridade") or "MEDIA",
         mecanico=(data.get("mecanico") or None),
         oficina=(data.get("oficina") or None),
@@ -169,11 +170,16 @@ def create_maintenance(db: Session, data: dict) -> Maintenance:
     db.add(item)
     db.commit()
     db.refresh(item)
+    # SPEC 05: vehicle in active maintenance → mark as MANUTENCAO
+    if m_status == "EM_ANDAMENTO" and vehicle.status not in ("EM_ROTA", "MANUTENCAO"):
+        vehicle.status = "MANUTENCAO"
+        db.add(vehicle)
+        db.commit()
     return item
 
 
 def update_maintenance(db: Session, item: Maintenance, data: dict) -> Maintenance:
-    old_status = item.status
+    old_status = (item.status or "PENDENTE").upper()
     if data.get("veiculoId"):
         item.vehicle_id = _find_vehicle(db, data["veiculoId"]).id
     mapping = {
@@ -191,6 +197,27 @@ def update_maintenance(db: Session, item: Maintenance, data: dict) -> Maintenanc
     for key, field in mapping.items():
         if key in data and data[key] is not None:
             setattr(item, field, data[key])
+    # SPEC 05: sync vehicle status based on maintenance transitions
+    new_status = (item.status or old_status).upper()
+    vehicle = db.get(Vehicle, item.vehicle_id)
+    if vehicle:
+        if new_status == "EM_ANDAMENTO" and old_status != "EM_ANDAMENTO":
+            # Maintenance started → mark vehicle as in-maintenance
+            if vehicle.status not in ("EM_ROTA", "MANUTENCAO"):
+                vehicle.status = "MANUTENCAO"
+                db.add(vehicle)
+        elif new_status == "CONCLUIDA" and old_status == "EM_ANDAMENTO":
+            # Maintenance done → restore vehicle if no other active maintenances
+            other_active = db.scalar(
+                select(func.count()).select_from(Maintenance).where(
+                    Maintenance.vehicle_id == item.vehicle_id,
+                    Maintenance.status == "EM_ANDAMENTO",
+                    Maintenance.id != item.id,
+                )
+            ) or 0
+            if other_active == 0 and vehicle.status == "MANUTENCAO":
+                vehicle.status = "ATIVO"
+                db.add(vehicle)
     # When a maintenance is completed, resolve linked pendências, alerts, and auto-alerts
     new_status = (data.get("status") or old_status or "").upper()
     if new_status == "CONCLUIDA" and old_status != "CONCLUIDA":
@@ -986,8 +1013,8 @@ def _sync_vehicle_driver_status(db: Session, route: Route, old_status: str, new_
 def create_route(db: Session, data: dict) -> Route:
     vehicle = _find_vehicle(db, data["veiculoId"])
     motorista_id = data.get("motoristaId") or vehicle.motorista_id or None
-    route_status = data.get("status") or "PENDENTE"
-    if route_status.upper() == "EM_ANDAMENTO" and not motorista_id:
+    route_status = (data.get("status") or "PENDENTE").upper()
+    if route_status == "EM_ANDAMENTO" and not motorista_id:
         raise HTTPException(status_code=422, detail="Uma rota em andamento requer motorista designado")
     item = Route(
         vehicle_id=vehicle.id,
@@ -1006,6 +1033,11 @@ def create_route(db: Session, data: dict) -> Route:
     _sync_vehicle_driver_status(db, item, "PENDENTE", route_status)
     db.commit()
     db.refresh(item)
+    # SPEC 06: regenerate auto-alerts after route creation
+    try:
+        generate_auto_alerts(db)
+    except Exception:
+        pass
     return item
 
 
@@ -1039,9 +1071,23 @@ def update_route(db: Session, item: Route, data: dict) -> Route:
     _sync_vehicle_driver_status(db, item, old_status, new_status)
     db.commit()
     db.refresh(item)
+    # SPEC 06: regenerate auto-alerts after route update
+    try:
+        generate_auto_alerts(db)
+    except Exception:
+        pass
     return item
 
 
 def delete_route(db: Session, item: Route) -> None:
+    was_active = item.status == "EM_ANDAMENTO"
     db.delete(item)
     db.commit()
+    # SPEC 06: if the deleted route was active, reconcile statuses
+    if was_active:
+        try:
+            from app.services.reconciliation_service import reconcile_route_statuses
+            reconcile_route_statuses(db)
+            generate_auto_alerts(db)
+        except Exception:
+            pass

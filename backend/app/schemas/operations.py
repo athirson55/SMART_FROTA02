@@ -1,6 +1,7 @@
+import re as _re
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class MaintenanceBase(BaseModel):
@@ -103,6 +104,22 @@ class RouteBase(BaseModel):
     dataFim: datetime | None = None
     distanciaKm: float | None = None
     observacoes: str | None = None
+
+    @field_validator("origem", "destino")
+    @classmethod
+    def address_not_purely_numeric(cls, v: str) -> str:
+        if _re.match(r"^\d+$", v.strip()):
+            raise ValueError(
+                "Endereço deve conter letras. Informe rua, avenida ou cidade válida (ex: Rua das Flores, 123)."
+            )
+        return v
+
+    @field_validator("distanciaKm")
+    @classmethod
+    def distance_not_negative(cls, v: float | None) -> float | None:
+        if v is not None and v < 0:
+            raise ValueError("Distância não pode ser negativa.")
+        return v
 
 
 class RouteCreate(RouteBase):

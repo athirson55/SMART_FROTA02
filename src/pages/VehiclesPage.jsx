@@ -9,6 +9,7 @@ import { getVehicles, deleteVehicle } from "../services/vehicles";
 import { getDrivers } from "../services/drivers";
 import { TrackingService } from "../services/tracking";
 import { useUiFeedback } from "../context/UiFeedbackContext";
+import { useDashboard } from "../context/DashboardContext";
 import { NovoVeiculoModal } from "../components/NovoVeiculoModal";
 
 function TrackingModal({ vehicle, onClose }) {
@@ -184,6 +185,7 @@ export function VehiclesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showSuccess, showInfo, showError } = useUiFeedback();
+  const { refresh: refreshDashboard } = useDashboard();
   const [vehicles, setVehicles] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
@@ -242,6 +244,7 @@ export function VehiclesPage() {
           )
         : [...prev, normalizedVehicle],
     );
+    refreshDashboard();
   }
 
   function handleVeiculoAtualizado(veiculoAtualizado) {
@@ -254,6 +257,7 @@ export function VehiclesPage() {
         vehicle.id === normalizedVehicle.id ? normalizedVehicle : vehicle,
       ),
     );
+    refreshDashboard();
   }
 
   function handleDeleteVehicle(vehicleId, vehiclePlate) {
@@ -262,6 +266,7 @@ export function VehiclesPage() {
       .then(() => {
         showSuccess(`Veículo ${vehiclePlate} removido com sucesso`);
         setVehicles((prev) => prev.filter((v) => v.id !== vehicleId));
+        refreshDashboard();
       })
       .catch((err) => {
         console.error("Erro ao remover veículo:", err);

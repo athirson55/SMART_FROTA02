@@ -110,6 +110,49 @@ def reconcile_route_statuses(db: Session) -> dict:
     return stats
 
 
+def reconcile_vehicle_availability(db: Session) -> dict:
+    """SPEC 05: Set vehicle.status = MANUTENCAO when they have active (EM_ANDAMENTO)
+    maintenances, and restore to ATIVO when the maintenance is done and no active
+    route holds the vehicle.
+    """
+    from app.models.operations import Maintenance, Route
+
+    stats = {"vehicles_set_manutencao": 0, "vehicles_restored": 0}
+
+    active_maint_vehicle_ids = {
+        row[0]
+        for row in db.execute(
+            select(Maintenance.vehicle_id).where(Maintenance.status == "EM_ANDAMENTO").distinct()
+        ).all()
+        if row[0]
+    }
+
+    active_route_vehicle_ids = {
+        row[0]
+        for row in db.execute(
+            select(Route.vehicle_id).where(Route.status == "EM_ANDAMENTO").distinct()
+        ).all()
+        if row[0]
+    }
+
+    for v in db.scalars(select(Vehicle)).all():
+        if v.id in active_maint_vehicle_ids and v.status not in ("MANUTENCAO", "EM_ROTA"):
+            v.status = "MANUTENCAO"
+            db.add(v)
+            stats["vehicles_set_manutencao"] += 1
+        elif (
+            v.id not in active_maint_vehicle_ids
+            and v.id not in active_route_vehicle_ids
+            and v.status == "MANUTENCAO"
+        ):
+            v.status = "ATIVO"
+            db.add(v)
+            stats["vehicles_restored"] += 1
+
+    db.commit()
+    return stats
+
+
 def reconcile_stale_alerts(db: Session) -> dict:
     """Resolve auto-generated alerts whose underlying condition no longer applies,
     and create new ones for conditions that are now active.
@@ -123,10 +166,12 @@ def run_full_reconciliation(db: Session) -> dict:
     """Run all reconciliation steps and return a combined stats dict."""
     norm_stats = normalize_statuses(db)
     route_stats = reconcile_route_statuses(db)
+    avail_stats = reconcile_vehicle_availability(db)
     alert_stats = reconcile_stale_alerts(db)
     return {
         **norm_stats,
         **route_stats,
+        **avail_stats,
         **alert_stats,
         "reconciled_at": datetime.now(timezone.utc).isoformat(),
     }

@@ -67,7 +67,7 @@ export function DashboardProvider({ children }) {
   }, [isAuthenticated]);
 
   return (
-    <DashboardContext.Provider value={{ dashboard, loading, hasData }}>
+    <DashboardContext.Provider value={{ dashboard, loading, hasData, refresh: doFetch }}>
       {children}
     </DashboardContext.Provider>
   );

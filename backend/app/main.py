@@ -50,23 +50,26 @@ async def lifespan(app: FastAPI):
                 db.close()
         except Exception as exc:
             logger.warning("Nao foi possivel semear o banco no startup: %s", exc)
-    # Normalize status values and reconcile route statuses on every startup
+    # Full reconciliation: normalize statuses, sync routes, fix vehicle availability,
+    # and regenerate auto-alerts so indicators are fresh after every cold-start.
     try:
-        from app.services.reconciliation_service import normalize_statuses, reconcile_route_statuses
+        from app.services.reconciliation_service import run_full_reconciliation
         db = SessionLocal()
         try:
-            norm = normalize_statuses(db)
-            route = reconcile_route_statuses(db)
+            stats = run_full_reconciliation(db)
             logger.info(
-                "Startup normalization: veiculos=%d, motoristas=%d | "
-                "reconciliation: veiculos=%d, motoristas=%d, rotas=%d",
-                norm["vehicles_normalized"], norm["drivers_normalized"],
-                route["vehicles_fixed"], route["drivers_fixed"], route["routes_checked"],
+                "Startup reconciliation: veiculos_norm=%d, motoristas_norm=%d | "
+                "routes: veiculos=%d, motoristas=%d | "
+                "availability: manutencao=%d, restored=%d | alerts=%d",
+                stats.get("vehicles_normalized", 0), stats.get("drivers_normalized", 0),
+                stats.get("vehicles_fixed", 0), stats.get("drivers_fixed", 0),
+                stats.get("vehicles_set_manutencao", 0), stats.get("vehicles_restored", 0),
+                stats.get("alerts_generated", 0),
             )
         finally:
             db.close()
     except Exception as exc:
-        logger.warning("Nao foi possivel normalizar/reconciliar no startup: %s", exc)
+        logger.warning("Nao foi possivel reconciliar no startup: %s", exc)
     yield
 
 

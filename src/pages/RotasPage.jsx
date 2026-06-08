@@ -5,6 +5,7 @@ import { AppHeader } from "../components/AppHeader";
 import { AppIcon } from "../components/AppIcon";
 import { EmptyState } from "../components/ui/EmptyState";
 import { useUiFeedback } from "../context/UiFeedbackContext";
+import { useDashboard } from "../context/DashboardContext";
 import { getRoutes, createRoute, updateRoute, deleteRoute } from "../services/routes";
 import { getVehicles } from "../services/vehicles";
 import { Modal } from "../components/Modal";
@@ -79,8 +80,19 @@ function RouteFormModal({ open, onClose, onSaved, initialValues, veiculos, loadi
   function validate() {
     const e = {};
     if (!form.veiculoId) e.veiculoId = "Selecione um veículo";
-    if (!form.origem.trim()) e.origem = "Origem é obrigatória";
-    if (!form.destino.trim()) e.destino = "Destino é obrigatório";
+    if (!form.origem.trim()) {
+      e.origem = "Origem é obrigatória";
+    } else if (/^\d+$/.test(form.origem.trim())) {
+      e.origem = "Origem deve conter letras. Informe rua, avenida ou cidade válida.";
+    }
+    if (!form.destino.trim()) {
+      e.destino = "Destino é obrigatório";
+    } else if (/^\d+$/.test(form.destino.trim())) {
+      e.destino = "Destino deve conter letras. Informe rua, avenida ou cidade válida.";
+    }
+    if (form.distanciaKm !== "" && parseFloat(form.distanciaKm) < 0) {
+      e.distanciaKm = "Distância não pode ser negativa.";
+    }
     if (form.status === "EM_ANDAMENTO" && !selectedVehicleHasDriver) {
       e.veiculoId = "O veículo selecionado não possui motorista. Vincule um motorista antes de iniciar a rota.";
     }
@@ -160,7 +172,8 @@ function RouteFormModal({ open, onClose, onSaved, initialValues, veiculos, loadi
 
           <div className="sf-field">
             <label className="sf-label">Distância (km)</label>
-            <input type="number" min="0" step="0.1" className="sf-input" placeholder="Ex: 98.5" value={form.distanciaKm} onChange={(e) => field("distanciaKm", e.target.value)} />
+            <input type="number" min="0" step="0.1" className={`sf-input ${errors.distanciaKm ? "is-error" : ""}`} placeholder="Ex: 98.5" value={form.distanciaKm} onChange={(e) => field("distanciaKm", e.target.value)} />
+            {errors.distanciaKm && <span className="sf-field-error">{errors.distanciaKm}</span>}
           </div>
 
           <div className="sf-field full">
@@ -175,6 +188,7 @@ function RouteFormModal({ open, onClose, onSaved, initialValues, veiculos, loadi
 
 export function RotasPage() {
   const { showSuccess, showError } = useUiFeedback();
+  const { refresh: refreshDashboard } = useDashboard();
   const [routes, setRoutes] = useState([]);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("todos");
@@ -211,6 +225,7 @@ export function RotasPage() {
         : [...prev, normalized],
     );
     fecharModal();
+    refreshDashboard();
   }
 
   function handleDelete(id) {
@@ -219,6 +234,7 @@ export function RotasPage() {
       .then(() => {
         showSuccess("Rota removida com sucesso");
         setRoutes((prev) => prev.filter((r) => r.id !== id));
+        refreshDashboard();
       })
       .catch(() => showError("Erro ao remover rota"));
   }
