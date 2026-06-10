@@ -1,5 +1,5 @@
 import "../styles/dashboard.css";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "../components/AppLayout";
 import { AppIcon } from "../components/AppIcon";
@@ -149,8 +149,12 @@ function Row({ row }) {
 export function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { dashboard, loading, hasData } = useDashboard();
+  const { dashboard, loading, hasData, refresh } = useDashboard();
   const [summaryModal, setSummaryModal] = useState(null);
+
+  // Re-fetch fresh data every time the user navigates to the Home page
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { refresh(); }, []);
 
   const displayName = user?.nome || user?.name || "Usuário";
 

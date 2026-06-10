@@ -9,6 +9,7 @@ import { getDrivers, deleteDriver } from "../services/drivers";
 import { getVehicles } from "../services/vehicles";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { AdicionarMotoristaModal } from "../components/AdicionarMotoristaModal";
+import { useDashboard } from "../context/DashboardContext";
 
 const filterKeys = ["Todos", "Em rota", "Disponível", "Afastado"];
 
@@ -79,6 +80,7 @@ function statusClass(status) {
 export function DriversPage() {
   const isMobile = useIsMobile(900);
   const { showInfo, showSuccess, showError } = useUiFeedback();
+  const { refresh: refreshDashboard } = useDashboard();
   const [drivers, setDrivers] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState(null);
@@ -130,6 +132,7 @@ export function DriversPage() {
           )
         : [...prev, normalizedDriver],
     );
+    refreshDashboard();
   }
 
   function handleMotoristaAtualizado(motoristaAtualizado) {
@@ -142,6 +145,7 @@ export function DriversPage() {
         driver.id === normalizedDriver.id ? normalizedDriver : driver,
       ),
     );
+    refreshDashboard();
   }
 
   function handleDeleteDriver(driverId, driverName) {
@@ -150,6 +154,7 @@ export function DriversPage() {
       .then(() => {
         showSuccess(`${driverName} removido com sucesso`);
         setDrivers((prev) => prev.filter((d) => d.id !== driverId));
+        refreshDashboard();
       })
       .catch((err) => {
         console.error("Erro ao remover motorista:", err);

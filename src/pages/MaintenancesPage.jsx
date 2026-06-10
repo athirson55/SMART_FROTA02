@@ -8,6 +8,7 @@ import { getMaintenances, deleteMaintenance } from "../services/maintenances";
 import { getVehicles } from "../services/vehicles";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovaManutencaoModal } from "../components/NovaManutencaoModal";
+import { useDashboard } from "../context/DashboardContext";
 
 const typeLabels = {
   preventiva: "Preventiva",
@@ -103,6 +104,7 @@ function priorityClass(priority) {
 export function MaintenancesPage() {
   const isMobile = useIsMobile(900);
   const { showSuccess, showError } = useUiFeedback();
+  const { refresh: refreshDashboard } = useDashboard();
   const [maintenances, setMaintenances] = useState([]);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("todos");
@@ -178,6 +180,7 @@ export function MaintenancesPage() {
         ? prev.map((item) => (item.id === normalized.id ? normalized : item))
         : [...prev, normalized],
     );
+    refreshDashboard();
   }
 
   function handleManutencaoAtualizada(atualizada) {
@@ -188,6 +191,7 @@ export function MaintenancesPage() {
     setMaintenances((prev) =>
       prev.map((item) => (item.id === normalized.id ? normalized : item)),
     );
+    refreshDashboard();
   }
 
   function handleDeleteMaintenance(maintId) {
@@ -196,6 +200,7 @@ export function MaintenancesPage() {
       .then(() => {
         showSuccess("Manutenção removida com sucesso");
         setMaintenances((prev) => prev.filter((m) => m.id !== maintId));
+        refreshDashboard();
       })
       .catch((err) => {
         console.error("Erro ao remover manutenção:", err);

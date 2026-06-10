@@ -8,6 +8,7 @@ import {
   resolveAlert as resolveAlertRequest,
   unresolveAlert as unresolveAlertRequest,
 } from "../services/alerts";
+import { useDashboard } from "../context/DashboardContext";
 
 const TYPE_CONFIG = {
   documento: {
@@ -140,6 +141,7 @@ function InfoIcon({ type }) {
 }
 
 export function AlertsPage() {
+  const { refresh: refreshDashboard } = useDashboard();
   const [alerts, setAlerts] = useState([]);
   const [activity, setActivity] = useState([]);
   const [query, setQuery] = useState("");
@@ -289,6 +291,7 @@ export function AlertsPage() {
       );
 
       showToast("Alerta marcado como resolvido!");
+      refreshDashboard();
     } catch (err) {
       console.error("Erro ao resolver alerta:", err);
       showToast(err?.response?.data?.message || "Erro ao resolver alerta.");
@@ -304,6 +307,7 @@ export function AlertsPage() {
       const saved = normalizeAlert(res.data?.data ?? res.data ?? original);
       setAlerts((prev) => prev.map((item) => (item.id === id ? saved : item)));
       showToast("Alerta reaberto com sucesso!");
+      refreshDashboard();
     } catch (err) {
       console.error("Erro ao reabrir alerta:", err);
       showToast(err?.response?.data?.message || "Erro ao reabrir alerta.");
@@ -345,6 +349,7 @@ export function AlertsPage() {
       );
 
       showToast(`${target.length} alertas marcados como resolvidos!`);
+      refreshDashboard();
     } catch (err) {
       console.error("Erro ao resolver alertas visíveis:", err);
       showToast(err?.response?.data?.message || "Erro ao resolver alertas.");

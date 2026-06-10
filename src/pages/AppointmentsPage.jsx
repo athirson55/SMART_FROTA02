@@ -9,6 +9,7 @@ import { getAppointments, deleteAppointment } from "../services/appointments";
 import { getVehicles } from "../services/vehicles";
 import { useUiFeedback } from "../context/UiFeedbackContext";
 import { NovoAgendamentoModal } from "../components/NovoAgendamentoModal";
+import { useDashboard } from "../context/DashboardContext";
 
 const filterItems = [
   { key: "todos", label: "Todos" },
@@ -136,6 +137,7 @@ function AppointmentCard({ item, actions }) {
 
 export function AppointmentsPage() {
   const { showSuccess, showError } = useUiFeedback();
+  const { refresh: refreshDashboard } = useDashboard();
   const [appointments, setAppointments] = useState([]);
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("todos");
@@ -194,6 +196,7 @@ export function AppointmentsPage() {
         ? prev.map((item) => (item.id === normalized.id ? normalized : item))
         : [...prev, normalized],
     );
+    refreshDashboard();
   }
 
   function handleAgendamentoAtualizado(atualizado) {
@@ -204,6 +207,7 @@ export function AppointmentsPage() {
     setAppointments((prev) =>
       prev.map((item) => (item.id === normalized.id ? normalized : item)),
     );
+    refreshDashboard();
   }
 
   function handleDeleteAppointment(apptId) {
@@ -212,6 +216,7 @@ export function AppointmentsPage() {
       .then(() => {
         showSuccess("Agendamento removido com sucesso");
         setAppointments((prev) => prev.filter((a) => a.id !== apptId));
+        refreshDashboard();
       })
       .catch((err) => {
         console.error("Erro ao remover agendamento:", err);

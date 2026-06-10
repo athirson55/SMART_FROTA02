@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getDashboardReport } from "../services/reports";
 import { useAuth } from "./AuthContext";
 
@@ -20,7 +20,10 @@ export function DashboardProvider({ children }) {
   const [loading, setLoading] = useState(false);
   const [hasData, setHasData] = useState(false);
 
-  function doFetch(attempt = 0) {
+  // Stable ref so retry timeouts always invoke the latest fetch logic
+  const fetchRef = useRef(null);
+
+  const doFetch = useCallback((attempt = 0) => {
     if (attempt === 0) setLoading(true);
     getDashboardReport()
       .then((res) => {
@@ -33,12 +36,15 @@ export function DashboardProvider({ children }) {
       })
       .catch(() => {
         if (attempt < 8) {
-          setTimeout(() => doFetch(attempt + 1), 8_000);
+          setTimeout(() => fetchRef.current?.(attempt + 1), 8_000);
         } else {
           setLoading(false);
         }
       });
-  }
+  }, []);
+
+  // Keep fetchRef pointing to the latest doFetch so retries are always current
+  fetchRef.current = doFetch;
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -50,6 +56,7 @@ export function DashboardProvider({ children }) {
 
     doFetch();
 
+    // Background polling every 60 s — keeps dashboard fresh passively
     const interval = setInterval(() => {
       getDashboardReport()
         .then((res) => {
@@ -60,11 +67,10 @@ export function DashboardProvider({ children }) {
           }
         })
         .catch(() => {});
-    }, 90_000);
+    }, 60_000);
 
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [isAuthenticated, doFetch]);
 
   return (
     <DashboardContext.Provider value={{ dashboard, loading, hasData, refresh: doFetch }}>
