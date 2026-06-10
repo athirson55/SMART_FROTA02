@@ -161,10 +161,29 @@ export function AlertsPage() {
 
   useEffect(() => {
     let active = true;
-    getAlerts({ limit: 100 })
-      .then((res) => { if (active) applyAlerts(res); })
+
+    function loadAlerts() {
+      return getAlerts({ limit: 100 })
+        .then((res) => { if (active) applyAlerts(res); })
+        .catch(() => {});
+    }
+
+    // Show existing alerts immediately for fast first render
+    loadAlerts();
+
+    // Silently run reconciliation on mount, then reload to include new alerts
+    generateAutoAlerts()
+      .then(loadAlerts)
       .catch(() => {});
-    return () => { active = false; };
+
+    // Keep alert list fresh every 30 s while the user stays on this page
+    const interval = setInterval(loadAlerts, 30_000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleGenerateAlerts() {
