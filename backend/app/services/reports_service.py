@@ -17,7 +17,8 @@ _TYPE_COLORS = {"PREVENTIVA": "#2563EB", "CORRETIVA": "#DC2626", "REVISAO": "#16
 
 def dashboard_report(db: Session):
     now = datetime.now(timezone.utc)
-    next_week = now + timedelta(days=7)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    next_week = today_start + timedelta(days=7)
 
     total_vehicles = db.scalar(select(func.count()).select_from(Vehicle)) or 0
     active_vehicles = db.scalar(select(func.count()).select_from(Vehicle).where(Vehicle.status == "ATIVO")) or 0
@@ -28,7 +29,9 @@ def dashboard_report(db: Session):
     drivers_in_route = db.scalar(select(func.count()).select_from(Driver).where(Driver.status == "EM_ROTA")) or 0
     drivers_available = db.scalar(select(func.count()).select_from(Driver).where(Driver.status == "DISPONIVEL")) or 0
 
-    maintenances_pending = db.scalar(select(func.count()).select_from(Maintenance).where(Maintenance.status == "PENDENTE")) or 0
+    maintenances_pending = db.scalar(
+        select(func.count()).select_from(Maintenance).where(Maintenance.status.in_(["PENDENTE", "AGENDADA"]))
+    ) or 0
     maintenances_in_progress = db.scalar(select(func.count()).select_from(Maintenance).where(Maintenance.status == "EM_ANDAMENTO")) or 0
     total_maintenance_cost = float(db.scalar(select(func.sum(Maintenance.custo))) or 0)
 
@@ -39,7 +42,7 @@ def dashboard_report(db: Session):
     appointments_upcoming = db.scalar(
         select(func.count()).select_from(Appointment).where(
             and_(
-                Appointment.data >= now,
+                Appointment.data >= today_start,
                 Appointment.data <= next_week,
                 Appointment.status.in_(["AGENDADO", "CONFIRMADO"]),
             )
@@ -49,7 +52,7 @@ def dashboard_report(db: Session):
     appointments_overdue = db.scalar(
         select(func.count()).select_from(Appointment).where(
             and_(
-                Appointment.data < now,
+                Appointment.data < today_start,
                 Appointment.status.in_(["AGENDADO", "CONFIRMADO"]),
             )
         )

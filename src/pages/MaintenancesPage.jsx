@@ -204,7 +204,7 @@ export function MaintenancesPage() {
       })
       .catch((err) => {
         console.error("Erro ao remover manutenção:", err);
-        showError("Erro ao remover manutenção");
+        showError(err?.response?.data?.detail || err?.response?.data?.message || "Erro ao remover manutenção");
       });
   }
 

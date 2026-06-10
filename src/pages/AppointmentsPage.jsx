@@ -220,7 +220,7 @@ export function AppointmentsPage() {
       })
       .catch((err) => {
         console.error("Erro ao remover agendamento:", err);
-        showError("Erro ao remover agendamento");
+        showError(err?.response?.data?.detail || err?.response?.data?.message || "Erro ao remover agendamento");
       });
   }
 

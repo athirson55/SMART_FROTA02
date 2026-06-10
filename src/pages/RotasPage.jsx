@@ -236,7 +236,7 @@ export function RotasPage() {
         setRoutes((prev) => prev.filter((r) => r.id !== id));
         refreshDashboard();
       })
-      .catch(() => showError("Erro ao remover rota"));
+      .catch((err) => showError(err?.response?.data?.detail || err?.response?.data?.message || "Erro ao remover rota"));
   }
 
   const counters = useMemo(() => ({

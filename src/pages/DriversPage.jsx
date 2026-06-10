@@ -158,7 +158,7 @@ export function DriversPage() {
       })
       .catch((err) => {
         console.error("Erro ao remover motorista:", err);
-        showError("Erro ao remover motorista");
+        showError(err?.response?.data?.detail || err?.response?.data?.message || "Erro ao remover motorista");
       });
   }
 

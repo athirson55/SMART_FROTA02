@@ -343,8 +343,15 @@ def update_vehicle(db: Session, vehicle: Vehicle, data: dict) -> Vehicle:
 
 
 def delete_vehicle(db: Session, vehicle: Vehicle) -> None:
-    db.delete(vehicle)
-    db.commit()
+    try:
+        db.delete(vehicle)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Não foi possível remover o veículo. Verifique se há registros vinculados que impedem a exclusão.",
+        )
 
 
 def list_vehicle_pendencias(db: Session, vehicle_id: str):

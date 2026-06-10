@@ -270,7 +270,7 @@ export function VehiclesPage() {
       })
       .catch((err) => {
         console.error("Erro ao remover veículo:", err);
-        showError("Erro ao remover veículo");
+        showError(err?.response?.data?.detail || err?.response?.data?.message || "Erro ao remover veículo");
       });
   }
 
