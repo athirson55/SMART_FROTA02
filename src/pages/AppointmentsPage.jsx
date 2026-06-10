@@ -86,7 +86,7 @@ function normalizeAppointment(item) {
     time: item.time || item.hora || "08:00",
     km: Number(item.km ?? 0),
     owner: item.owner || item.responsavel || item.local || "",
-    done: Boolean(item.done ?? item.concluido ?? (item.status || "").toUpperCase() === "CONCLUIDA" ?? false),
+    done: Boolean(item.done ?? item.concluido ?? ["CONCLUIDA", "CONCLUIDO"].includes((item.status || "").toUpperCase()) ?? false),
   };
 }
 

@@ -17,6 +17,7 @@ import { AlertsPage } from "./pages/AlertsPage";
 import { RotasPage } from "./pages/RotasPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import { GuestOnlyRoute, ProtectedRoute } from "./components/RouteGuards";
 
 const privateRoutes = [
@@ -63,6 +64,10 @@ const privateRoutes = [
   {
     path: "/configuracoes",
     element: <SettingsPage />,
+  },
+  {
+    path: "/notificacoes",
+    element: <NotificationsPage />,
   },
 ];
 

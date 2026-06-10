@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_admin
 from app.core.responses import success_response
 from app.database.session import get_db
 from app.schemas.operations import AlertCreate, AlertUpdate
@@ -64,7 +64,7 @@ def unresolve_alert_route(alert_id: str, db: Session = Depends(get_db), current_
 
 
 @router.post("/gerar-automaticos")
-def generate_alerts_route(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def generate_alerts_route(db: Session = Depends(get_db), current_user=Depends(require_admin)):
     items = generate_auto_alerts(db)
     return success_response("Alertas automáticos gerados com sucesso", [serialize_alert(item) for item in items])
 

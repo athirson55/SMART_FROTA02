@@ -21,10 +21,15 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => readStoredUser());
   const [loading, setLoading] = useState(false);
+  const storedOnMount = readStoredTokens().token;
+  const [isInitializing, setIsInitializing] = useState(Boolean(storedOnMount));
 
   useEffect(() => {
     const { token } = readStoredTokens();
-    if (!token) return;
+    if (!token) {
+      setIsInitializing(false);
+      return;
+    }
     api
       .get("/auth/eu")
       .then((res) => {
@@ -35,6 +40,9 @@ export function AuthProvider({ children }) {
       .catch(() => {
         clearSession();
         setUser(null);
+      })
+      .finally(() => {
+        setIsInitializing(false);
       });
   }, []);
 
@@ -104,6 +112,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       loading,
+      isInitializing,
       isAuthenticated: Boolean(user),
       login,
       registrar,
@@ -111,7 +120,7 @@ export function AuthProvider({ children }) {
       logout,
       updateUser,
     }),
-    [user, loading, login, registrar, acceptVerification, logout, updateUser],
+    [user, loading, isInitializing, login, registrar, acceptVerification, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

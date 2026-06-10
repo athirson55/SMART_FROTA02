@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.auth.deps import get_current_user
@@ -16,6 +16,14 @@ from app.services.operations_service import (
     serialize_notification,
     update_notification,
 )
+
+
+def _check_notification_ownership(notification, current_user) -> None:
+    if notification.user_id != current_user.id and current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso não autorizado a esta notificação",
+        )
 
 router = APIRouter(prefix="/notificacoes", tags=["Notificações"])
 
@@ -79,12 +87,19 @@ def read_notifications(
 @router.get("/{notification_id}")
 def read_notification(notification_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     item = get_notification(db, notification_id)
+    _check_notification_ownership(item, current_user)
     return success_response("Notificação encontrada", serialize_notification(item))
 
 
 @router.post("")
 def create_notification_route(payload: NotificationCreate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     data = payload.model_dump()
+    # Enforce ownership: userId must be the requester (unless admin)
+    if data.get("userId") and data["userId"] != current_user.id and current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Não é permitido criar notificações para outros usuários",
+        )
     if not data.get("userId"):
         data["userId"] = current_user.id
     item = create_notification(db, data)
@@ -95,6 +110,7 @@ def create_notification_route(payload: NotificationCreate, db: Session = Depends
 @router.patch("/{notification_id}")
 def update_notification_route(notification_id: str, payload: NotificationUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     item = get_notification(db, notification_id)
+    _check_notification_ownership(item, current_user)
     item = update_notification(db, item, payload.model_dump(exclude_unset=True))
     return success_response("Notificação atualizada com sucesso", serialize_notification(item))
 
@@ -102,5 +118,6 @@ def update_notification_route(notification_id: str, payload: NotificationUpdate,
 @router.delete("/{notification_id}")
 def delete_notification_route(notification_id: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     item = get_notification(db, notification_id)
+    _check_notification_ownership(item, current_user)
     delete_notification(db, item)
     return success_response("Notificação removida com sucesso", {"deleted": True})

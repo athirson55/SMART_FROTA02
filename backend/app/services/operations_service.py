@@ -10,6 +10,11 @@ from app.models.user import User
 from app.services.fleet_service import serialize_vehicle
 
 
+def _normalize_appointment_status(s: str) -> str:
+    """Normalize appointment status: CONCLUIDA → CONCLUIDO for consistency."""
+    return "CONCLUIDO" if (s or "").upper() == "CONCLUIDA" else s
+
+
 def serialize_route(item: Route) -> dict:
     return {
         "id": item.id,
@@ -266,7 +271,23 @@ def update_maintenance(db: Session, item: Maintenance, data: dict) -> Maintenanc
 
 
 def delete_maintenance(db: Session, item: Maintenance) -> None:
+    was_active = item.status == "EM_ANDAMENTO"
+    vehicle_id = item.vehicle_id
     db.delete(item)
+    db.flush()
+    # SDD-010: if deleted maintenance was active, restore vehicle status if no other active maintenances remain
+    if was_active:
+        other_active = db.scalar(
+            select(func.count()).select_from(Maintenance).where(
+                Maintenance.vehicle_id == vehicle_id,
+                Maintenance.status == "EM_ANDAMENTO",
+            )
+        ) or 0
+        if other_active == 0:
+            vehicle = db.get(Vehicle, vehicle_id)
+            if vehicle and vehicle.status == "MANUTENCAO":
+                vehicle.status = "ATIVO"
+                db.add(vehicle)
     db.commit()
 
 
@@ -309,7 +330,7 @@ def create_appointment(db: Session, data: dict) -> Appointment:
         km=int(data.get("km") or 0),
         local=(data.get("local") or None),
         responsavel=(data.get("responsavel") or None),
-        status=data.get("status") or "AGENDADO",
+        status=_normalize_appointment_status(data.get("status") or "AGENDADO"),
         observacoes=(data.get("observacoes") or None),
     )
     db.add(item)
@@ -334,10 +355,11 @@ def update_appointment(db: Session, item: Appointment, data: dict) -> Appointmen
     }
     for key, field in mapping.items():
         if key in data and data[key] is not None:
-            setattr(item, field, data[key])
+            val = _normalize_appointment_status(data[key]) if key == "status" else data[key]
+            setattr(item, field, val)
     # When appointment is completed, resolve its fingerprinted auto-alert
     new_status = (item.status or "").upper()
-    if new_status in ("CONCLUIDA", "CONCLUIDO") and (old_status or "").upper() not in ("CONCLUIDA", "CONCLUIDO"):
+    if new_status == "CONCLUIDO" and (old_status or "").upper() not in ("CONCLUIDA", "CONCLUIDO"):
         now_ts = datetime.now(timezone.utc)
         fp_alert = db.scalar(
             select(Alert).where(
@@ -537,7 +559,7 @@ def _reconcile_auto_alerts(db: Session, vehicles: list, drivers: list, now) -> N
         if maint and maint.status == "CONCLUIDA":
             _resolve(fp)
 
-    # Appointments: resolve if now CONCLUIDA
+    # Appointments: resolve if now CONCLUIDO (canonical)
     appt_fps = db.scalars(
         select(Alert.observacao).where(
             Alert.observacao.like("auto::agendamento::%"),

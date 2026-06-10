@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.auth.deps import get_current_user
+from app.auth.deps import get_current_user, require_admin
 from app.core.responses import success_response
 from app.database.session import get_db
 from app.schemas.settings import SystemSettingUpdate
@@ -17,7 +17,7 @@ def read_settings(db: Session = Depends(get_db), current_user=Depends(get_curren
 
 
 @router.patch("")
-def update_settings_route(payload: SystemSettingUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def update_settings_route(payload: SystemSettingUpdate, db: Session = Depends(get_db), current_user=Depends(require_admin)):
     settings = get_or_create_settings(db)
     settings = update_settings(settings, payload.model_dump(exclude_unset=True))
     db.add(settings)

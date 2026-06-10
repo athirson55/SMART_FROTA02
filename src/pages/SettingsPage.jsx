@@ -261,6 +261,9 @@ export function SettingsPage() {
             if (prefs.smsAlerts !== undefined) setSmsAlerts(prefs.smsAlerts);
             if (prefs.dailySummary !== undefined) setDailySummary(prefs.dailySummary);
             if (prefs.theme) setThemeMode(prefs.theme);
+            if (prefs.oilInterval !== undefined) setOilInterval(prefs.oilInterval);
+            if (prefs.brakeInterval !== undefined) setBrakeInterval(prefs.brakeInterval);
+            if (prefs.reviewInterval !== undefined) setReviewInterval(prefs.reviewInterval);
           } catch { /* ignore parse errors */ }
         }
       })
@@ -300,7 +303,17 @@ export function SettingsPage() {
   }
 
   async function handleSaveFlota() {
-    const rawJson = JSON.stringify({ oilInterval, brakeInterval, reviewInterval });
+    const rawJson = JSON.stringify({
+      oilInterval,
+      brakeInterval,
+      reviewInterval,
+      maintenanceAlerts,
+      criticalAlerts,
+      weeklyReport,
+      newRequests,
+      smsAlerts,
+      dailySummary,
+    });
     await saveSettings({ lowDaysThreshold: advanceDays, lowKmThreshold, rawJson });
     showToast("Configurações da frota salvas!");
   }

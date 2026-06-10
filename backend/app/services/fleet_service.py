@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models.fleet import Driver, Vehicle, VehiclePendencia
+from app.models.fleet import Driver, Vehicle, VehiclePendencia  # noqa: F401 (Driver needed for motorista validation)
 
 
 def _tz(dt):
@@ -237,6 +237,8 @@ def create_vehicle(db: Session, data: dict) -> Vehicle:
     motorista_id = data.get("motoristaId") or None
     if int(data.get("km") or 0) < 0:
         raise HTTPException(status_code=422, detail="Quilometragem não pode ser negativa")
+    if motorista_id and not db.get(Driver, motorista_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Motorista não encontrado")
     _validate_vehicle_uniques(db, placa=placa, chassi=chassi)
     vehicle = Vehicle(
         modelo=normalize_text(data["modelo"]),
@@ -296,6 +298,9 @@ def update_vehicle(db: Session, vehicle: Vehicle, data: dict) -> Vehicle:
         "proximaRevisaoKm": "proxima_revisao_km",
         "proximaRevisaoData": "proxima_revisao_data",
     }
+    if "motoristaId" in data and data["motoristaId"] is not None:
+        if not db.get(Driver, data["motoristaId"]):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Motorista não encontrado")
     _enum_fields = {"status"}
     for key, field in mapping.items():
         if key in data and data[key] is not None:

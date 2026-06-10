@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from fastapi import HTTPException, status
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -145,6 +146,8 @@ def fleet_report(db: Session, search: str | None = None):
 
 
 def complete_report(db: Session, dias: int = 30, veiculo_id: str | None = None) -> dict:
+    if veiculo_id and not db.get(Vehicle, veiculo_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Veículo não encontrado")
     now = datetime.now(timezone.utc)
     start = now - timedelta(days=dias)
 

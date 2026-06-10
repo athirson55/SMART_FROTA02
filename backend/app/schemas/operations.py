@@ -137,6 +137,22 @@ class RouteUpdate(BaseModel):
     distanciaKm: float | None = None
     observacoes: str | None = None
 
+    @field_validator("origem", "destino")
+    @classmethod
+    def address_not_purely_numeric(cls, v: str | None) -> str | None:
+        if v is not None and _re.match(r"^\d+$", v.strip()):
+            raise ValueError(
+                "Endereço deve conter letras. Informe rua, avenida ou cidade válida (ex: Rua das Flores, 123)."
+            )
+        return v
+
+    @field_validator("distanciaKm")
+    @classmethod
+    def distance_not_negative(cls, v: float | None) -> float | None:
+        if v is not None and v < 0:
+            raise ValueError("Distância não pode ser negativa.")
+        return v
+
 
 class NotificationBase(BaseModel):
     titulo: str = Field(min_length=2, max_length=160)

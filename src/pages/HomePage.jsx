@@ -178,10 +178,10 @@ export function HomePage() {
           title: `${vehicle.placa} - ${vehicle.modelo}`,
           subtitle: vehicle.pendencias?.[0]?.label || "Pendência registrada",
         })),
-      "Entregas atrasadas": [
+      "Agendamentos atrasados": [
         {
           title: `${dashboard.agendamentos?.proximos ?? 0} agendamentos próximos`,
-          subtitle: "Acesse Rotas para acompanhar as entregas em andamento",
+          subtitle: "Acesse Agendamentos para acompanhar os compromissos em andamento",
         },
       ],
       "Frota disponível": [

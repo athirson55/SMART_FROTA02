@@ -148,32 +148,31 @@ export function AlertsPage() {
   const [sortNewest, setSortNewest] = useState(true);
   const [selectedId, setSelectedId] = useState(null);
   const [toast, setToast] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  function applyAlerts(res) {
+    const data = res.data?.data ?? [];
+    const normalized = data.map(normalizeAlert);
+    setAlerts(normalized);
+    setActivity(buildActivityFromAlerts(normalized));
+  }
 
   useEffect(() => {
     let active = true;
+    getAlerts({ limit: 100 })
+      .then((res) => { if (active) applyAlerts(res); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
-    function applyAlerts(res) {
-      if (!active) return;
-      const data = res.data?.data ?? [];
-      const normalized = data.map(normalizeAlert);
-      setAlerts(normalized);
-      setActivity(buildActivityFromAlerts(normalized));
-    }
-
-    // Load existing alerts immediately for fast first render
-    getAlerts({ limit: 100 }).then(applyAlerts).catch(() => {});
-
-    // Generate auto-alerts then reload the full list so newly created
-    // alerts appear without requiring a manual refresh
+  function handleGenerateAlerts() {
+    setIsGenerating(true);
     generateAutoAlerts()
       .then(() => getAlerts({ limit: 100 }))
       .then(applyAlerts)
-      .catch(() => {});
-
-    return () => {
-      active = false;
-    };
-  }, []);
+      .catch(() => {})
+      .finally(() => setIsGenerating(false));
+  }
 
   const selectedAlert = alerts.find((alert) => alert.id === selectedId) || null;
 
@@ -522,6 +521,15 @@ export function AlertsPage() {
               </button>
 
               <div className="toolbar-right">
+                <button
+                  className="sort-btn"
+                  type="button"
+                  onClick={handleGenerateAlerts}
+                  disabled={isGenerating}
+                  title="Gerar alertas automáticos"
+                >
+                  {isGenerating ? "Gerando…" : "Gerar Alertas"}
+                </button>
                 <button
                   className="sort-btn"
                   type="button"

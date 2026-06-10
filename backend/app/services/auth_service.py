@@ -143,7 +143,7 @@ def register_user(
     nome: str,
     email: str,
     senha: str,
-    role: str = "ADMIN",
+    role: str = "USER",
     avatar_foto: str | None = None,
     skip_verification: bool = False,
 ) -> tuple[User, str | None]:
@@ -244,9 +244,11 @@ def refresh_session(db: Session, refresh_token_raw: str) -> dict:
     if not user or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuário inválido")
 
-    token_row.last_used_at = datetime.now(timezone.utc)
+    # Revoke old refresh token (rotation: each token is single-use)
+    now_rot = datetime.now(timezone.utc)
+    token_row.revoked_at = now_rot
+    token_row.last_used_at = now_rot
     db.add(token_row)
-    db.commit()
 
     access_token, _, _ = create_token(
         subject=user.id,
@@ -254,9 +256,16 @@ def refresh_session(db: Session, refresh_token_raw: str) -> dict:
         expires_delta=token_expiration_from_minutes(settings.access_token_expire_minutes),
         extra_claims={"email": user.email, "role": user.role},
     )
+    new_refresh_token, new_refresh_jti, new_refresh_expires_at = create_token(
+        subject=user.id,
+        token_type="refresh",
+        expires_delta=token_expiration_from_days(settings.refresh_token_expire_days),
+        extra_claims={"email": user.email, "role": user.role},
+    )
+    _store_refresh_token(db, user, new_refresh_jti, new_refresh_expires_at)
     return {
         "token": access_token,
-        "refreshToken": refresh_token_raw,
+        "refreshToken": new_refresh_token,
         "expiresIn": settings.access_token_expire_minutes * 60,
         "refreshExpiresIn": settings.refresh_token_expire_days * 86400,
         "usuario": serialize_user(user),

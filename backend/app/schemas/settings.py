@@ -17,8 +17,8 @@ class SystemSettingUpdate(BaseModel):
     companyName: str | None = Field(default=None, max_length=160)
     timezone: str | None = Field(default=None, max_length=80)
     theme: str | None = Field(default=None, max_length=40)
-    lowKmThreshold: int | None = None
-    lowDaysThreshold: int | None = None
+    lowKmThreshold: int | None = Field(default=None, ge=0)
+    lowDaysThreshold: int | None = Field(default=None, ge=0)
     emailNotifications: bool | None = None
-    dashboardRefreshMinutes: int | None = None
+    dashboardRefreshMinutes: int | None = Field(default=None, ge=1)
     rawJson: str | None = None
