@@ -22,15 +22,20 @@ export function DashboardProvider({ children }) {
 
   // Stable ref so retry timeouts always invoke the latest fetch logic
   const fetchRef = useRef(null);
+  // Tracks whether we've ever successfully loaded data — avoids showing
+  // the loading skeleton on subsequent navigations when data already exists
+  const hasDataRef = useRef(false);
 
   const doFetch = useCallback((attempt = 0) => {
-    if (attempt === 0) setLoading(true);
+    // Only show loading skeleton on the very first fetch (no data yet)
+    if (attempt === 0 && !hasDataRef.current) setLoading(true);
     getDashboardReport()
       .then((res) => {
         const data = res.data?.data;
         if (data) {
           setDashboard(data);
           setHasData(true);
+          hasDataRef.current = true;
         }
         setLoading(false);
       })
@@ -51,6 +56,7 @@ export function DashboardProvider({ children }) {
       setDashboard(INITIAL_STATE);
       setHasData(false);
       setLoading(false);
+      hasDataRef.current = false;
       return;
     }
 

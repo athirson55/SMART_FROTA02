@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,10 @@ def read_complete_report(
 
 @router.get("/dashboard")
 def read_dashboard_report(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
-    return success_response("Relatório de dashboard gerado com sucesso", dashboard_report(db))
+    try:
+        return success_response("Relatório de dashboard gerado com sucesso", dashboard_report(db))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório: {str(exc)}")
 
 
 @router.get("/frota")
